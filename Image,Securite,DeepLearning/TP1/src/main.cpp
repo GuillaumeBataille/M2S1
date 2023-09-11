@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
     }
 
     std::string inputName = argv[1];
-    inputName = inputName;
+    inputName = "../in/" + inputName;
     int nH, nW, nTaille;
     unsigned int key;
     key = atoi(argv[2]) % 256;
@@ -39,20 +39,23 @@ int main(int argc, char *argv[])
     lire_image_pgm(inputName, ImgIn, nH * nW);
 
     //Pré Traitement
-    std::cout << "La clef est : " << key << std::endl;
 
     OCTET *Map;
     allocation_tableau(Map, OCTET, nTaille);
 
+    std::cout << std::endl;
+    std::cout << "La clef est : " << key << std::endl;
+    std::cout << std::endl;
+
     // Traitement
     std::cout << "Traitement 1 : Chiffrement par permutation" << std::endl;
+    std::cout << std::endl;
     srand(key); // Init la seed avec la key
 
     //Pour chaque pixel de l'image de base,
-
     for (int i = 0; i < nTaille; i++)
     {
-        int rand_pos = rand() % (nTaille - 1); // Notre position random
+        int rand_pos = rand() % (nTaille); // Notre position random
         // Si la position random est libre
         if (Map[rand_pos] != 255)
         {
@@ -66,6 +69,7 @@ int main(int argc, char *argv[])
             {
                 cpt = (cpt + 1) % nTaille; // On regarde le pixel suivant
             }
+            rand_pos = cpt;
             Map[rand_pos] = 255;         // On colore la map pour dire que c'est occupé
             ImgOut[rand_pos] = ImgIn[i]; // On permute
         }
@@ -77,19 +81,32 @@ int main(int argc, char *argv[])
     //Ecriture
     ecrire_image_pgm("../out/Chiffrement_Permutation.pgm", ImgOut, nH, nW);
     ecrire_image_pgm("../out/CartedesDisponibilites.pgm", Map, nH, nW);
-
-    //-----------------//
+    //Infos
+    std::cout << "Entropy de base: " << ImageAlgorithms::entropy(ImgIn, nTaille) << std::endl;
+    std::cout << "PSNR après permutation: " << ImageAlgorithms::psnr(ImgIn, ImgOut, 256, nTaille) << std::endl;
+    std::cout << "Entropy après permutation: " << ImageAlgorithms::entropy(ImgOut, nTaille) << std::endl;
+    std::cout << std::endl;
+    //---------------------------------------------------------------------------------------------//
 
     std::cout << "Traitement 2 : Chiffrement par substitution" << std::endl;
-    //Pour le pixel initial :
-    ImgOut[0] = (key + ImgIn[0]) % 256;
+    std::cout << std::endl;
+    srand(key); // Re init la graine
 
-    for (int i = 1; i < nTaille; i++)
+    ImgOut[0] = (rand() % 256 + ImgIn[0]) % 256; //Pour le pixel initial
+
+    for (int i = 1; i < nTaille; i++) // Pour chaque pixel de 1 a nTaille -1
     {
-        ImgOut[i] = (ImgOut[i - 1] + ImgIn[i] + rand()) % 256;
+        ImgOut[i] = (ImgOut[i - 1] + ImgIn[i] + rand() % 256) % 256; // On recurse grace au précédent
     }
+
+    //Ecriture
     ImageAlgorithms::writeHistoDatFile(ImgOut, nTaille, "../dat/s_post.dat", false);
     ecrire_image_pgm("../out/Chiffrement_Substitution.pgm", ImgOut, nH, nW);
+    //Infos
+    std::cout << "Entropy de base: " << ImageAlgorithms::entropy(ImgIn, nTaille) << std::endl;
+    std::cout << "PSNR après substitution: " << ImageAlgorithms::psnr(ImgIn, ImgOut, 255, nTaille) << std::endl;
+    std::cout << "Entropy après substitution: " << ImageAlgorithms::entropy(ImgOut, nTaille) << std::endl;
+
     free(ImgIn);
     free(ImgOut);
 

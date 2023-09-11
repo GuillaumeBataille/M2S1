@@ -1,0 +1,34 @@
+Objectif : Copier coller & Image de base
+
+Partie 1 : Chiffrage de l'image par permutation 
+C quoi 
+Img de base -> chiffred version avec les infos dessous 
+histogramme
+
+Conclusion :Effectivement y'a diffusion (des ombres, des formes, etc...) Pas opti car l'entropie ne bouge pas (et c'est ça qu'on cherche a maximiser)
+
+Partie 2 : Chiffrage par substitution 
+C quoi et différence avec la méthode précédente
+Img de base -> chiffred version avec les infos dessous 
+histogramme
+
+Conclusion: C'est plus efficace car on augmente l'entropie presque au max
+
+
+
+Partie 3 : Dechiffrage par bruteforce
+C quoi et pk on peut l'utiliser dans cette méthode (en etudiant l'entropie < 7.9)
+Img du collègue -> dechiffrage par bruteforce avec infos dessous
+
+Conclusion : le collegue a confirmé l'image et la clef. Puissant car si la clef se complexifie, on a un algo très simple qui se base vraiment sur la clef.
+
+Img a créer : 
+
+-Histo
+Img de base teckel 
+Chiffrage permut
+Chiffrage substi
+Chiffrage du collegue
+Dechiffrage du collègue
+
+ 

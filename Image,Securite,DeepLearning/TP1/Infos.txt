@@ -1,0 +1,31 @@
+Image du collègue : Entropy : 6.05195 associé a la clef :50
+
+Mon image decryptée : Entropy : 7.53292 associé a la clef :99
+
+
+La clef est : 99
+
+Traitement 1 : Chiffrement par permutation
+
+Entropy de base: 7.53292
+PSNR après permutation: 11.4064
+Entropy après permutation: 7.53292
+
+Traitement 2 : Chiffrement par substitution
+
+Entropy de base: 7.53292
+PSNR après substitution: 9.17148
+Entropy après substitution: 7.99933
+
+
+
+
+
+
+USAGE : (être dans src)
+
+g++ main.cpp -o exe && ./exe ImgIn.pgm key (image dans in et key un entier entre 1 et 255)
+
+g++ bruteforcing.cpp -o exe && ./exe path_to_Imgtobrutforce.pgm 
+
+(re)plot "../dat/p_base.dat" lt rgb "blue" with lines title "Histo before"     
