@@ -1301,6 +1301,100 @@ namespace ImageAlgorithms
         }
     }
 
+    void permute(OCTET *ImgIn, OCTET *ImgOut, int nTaille, unsigned int key)
+    {
+        srand(key); // Init la seed avec la key
+        //Création de la carte des disponibilités
+        OCTET *Map;
+        allocation_tableau(Map, OCTET, nTaille);
+
+        for (int i = 0; i < nTaille; i++) //Pour chaque pixel de l'image de base,
+        {
+            int rand_pos = rand() % (nTaille); // Notre position random
+            // Si la position random est libre
+            if (Map[rand_pos] != 255)
+            {
+                Map[rand_pos] = 255;         // On colore la map pour dire que c'est occupé
+                ImgOut[rand_pos] = ImgIn[i]; // On permute
+            }
+            else // La pos random est occupée
+            {
+                int cpt = rand_pos;
+                while (Map[cpt] == 255) // Tant qu'on est sur du blanc (donc des pixel occupés)
+                {
+                    cpt = (cpt + 1) % nTaille; // On regarde le pixel suivant
+                }
+                rand_pos = cpt;
+                Map[rand_pos] = 255;         // On colore la map pour dire que c'est occupé
+                ImgOut[rand_pos] = ImgIn[i]; // On permute
+            }
+        }
+    }
+
+    void reverse_permute(OCTET *ImgIn, OCTET *ImgOut, int nTaille, unsigned int key)
+    {
+        OCTET *Map; // Création de la carte des pixels déja replacés
+        allocation_tableau(Map, OCTET, nTaille);
+
+        srand(key);                       // Init la seed
+        for (int i = 0; i < nTaille; i++) // Pour chaque pixel
+        {
+            int rand_pos = rand() % (nTaille); // Notre position random
+            if (Map[rand_pos] != 255)
+            {
+                Map[rand_pos] = 255;         // On colore la map pour dire que ce pixel est desormais occupé
+                ImgOut[i] = ImgIn[rand_pos]; // Contrairement a l'autre, on attribue la position random dans la position i de l'image qu'on reconstruit
+            }
+            else // On est sur un pixel déja occupé
+            {
+                int cpt = rand_pos;
+                while (Map[cpt] == 255) // Tant qu'on est sur du blanc (donc des pixel occupés)
+                {
+                    cpt = (cpt + 1) % nTaille; // On regarde le pixel suivant
+                }
+                rand_pos = cpt;
+                Map[rand_pos] = 255;         // On colore la map pour dire que c'est occupé
+                ImgOut[i] = ImgIn[rand_pos]; // On permute, toujours en inversant i et rand_pos
+            }
+        }
+    }
+
+    void substitute(OCTET *ImgIn, OCTET *ImgOut, int nTaille, unsigned int key)
+    {
+        srand(key); // Init la graine
+
+        ImgOut[0] = (rand() % 256 + ImgIn[0]) % 256; //Pour le pixel initial
+
+        for (int i = 1; i < nTaille; i++) // Pour chaque pixel de 1 a nTaille -1
+        {
+            ImgOut[i] = (ImgOut[i - 1] + ImgIn[i] + rand() % 256) % 256; // On recurse grace au précédent
+        }
+    }
+
+    void reverse_substitute_brutforce(OCTET *ImgIn, OCTET *ImgOut, int nTaille)
+    {
+        OCTET *ImgTemp; // Image temporaire
+        allocation_tableau(ImgTemp, OCTET, nTaille);
+
+        //On teste toute les keys possible
+        for (int key = 1; key < 256; key++)
+        {
+            srand(key); // Init la seed avec la key
+            //Pour chaque pixel de l'image
+            for (int i = 0; i < nTaille; i++)
+            {
+                ImgOut[i] = (ImgIn[i] - ImgIn[i - 1] - rand()) % 256; // On fait l'inverse de la formule du substitute
+            }
+            double entropy = ImageAlgorithms::entropy(ImgOut, nTaille);
+            if (entropy < 7.9) // Si l'entropie est pas chaotique
+            {
+                ImgOut = ImgTemp; // On save l'image dans ImgOut
+                std::cout << "Entropy : " << entropy << " associé a la clef :" << key << std::endl;
+                break;
+            }
+        }
+    }
+
 }
 
 #endif //CODAGE_IMAGEALGORITHMS_H
