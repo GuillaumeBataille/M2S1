@@ -35,6 +35,11 @@ std::vector<Vec3> normals;   // Vector de normales
 std::vector<Vec3> positions2; // Vector de positions secondaire
 std::vector<Vec3> normals2;   // Vector de normales secondaire
 
+std::vector<Vec3> positions3; // Vector de positions secondaire
+std::vector<Vec3> normals3;   // Vector de normales secondaire
+
+std::vector<Vec3> positions4; // Vector de positions secondaire
+std::vector<Vec3> normals4;   // Vector de normales secondaire
 // -------------------------------------------
 // OpenGL/GLUT application code.
 // -------------------------------------------
@@ -49,7 +54,8 @@ static bool mouseMovePressed = false;
 static bool mouseZoomPressed = false;
 static int lastX = 0, lastY = 0, lastZoom = 0;
 static bool fullScreen = false;
-
+bool showmesh = true;
+int mod = 0;
 // ------------------------------------------------------------------------------------------------------------
 // i/o and some stuff
 // ------------------------------------------------------------------------------------------------------------
@@ -134,7 +140,11 @@ void applyRandomRigidTransformation(std::vector<Vec3> &io_positions, std::vector
     Mat3 R = Mat3::RandRotation();
     Vec3 t = Vec3::Rand(1.f);
     for (unsigned int pIt = 0; pIt < io_positions.size(); ++pIt)
-    {
+    {   
+    double x = (double)(rand()) / (double)(RAND_MAX);
+    double y = (double)(rand()) / (double)(RAND_MAX);
+    double z = (double)(rand()) / (double)(RAND_MAX);
+        //t = Vec3(0.02*x,0.02*y,0.02*z);
         io_positions[pIt] = R * io_positions[pIt] + t;
         io_normals[pIt] = R * io_normals[pIt];
     }
@@ -216,7 +226,7 @@ double wendland(double r, double d)
     return ((1 - pow(d / 2, 4)) * (1 + (4 * (d / r))));
 }
 
-void HPSS(std::vector<Vec3> positions, std::vector<Vec3> normals, std::vector<Vec3> &positions2, std::vector<Vec3> &normals2, BasicANNkdTree const &kdtree, int kernel_type, float radis, unsigned int nbIterations = 1, unsigned int k = 20)
+void HPSS(std::vector<Vec3> positions, std::vector<Vec3> normals, std::vector<Vec3> &positions2, std::vector<Vec3> &normals2, BasicANNkdTree const &kdtree, int kernel_type, float radius, unsigned int nbIterations = 1, unsigned int k = 20)
 {
 
     ANNidxArray id_nearest_neighbors = new ANNidx[k];
@@ -229,27 +239,27 @@ void HPSS(std::vector<Vec3> positions, std::vector<Vec3> normals, std::vector<Ve
             kdtree.knearest(positions2[i], k, id_nearest_neighbors, square_distances_to_neighbors); // On compute les k voisins
             Vec3 centroid = Vec3(0, 0, 0);
             Vec3 normal = Vec3(0, 0, 0);
-            double range = 10;
             double sum_w = 0.0;
             int weight;
             double max_dist = 0;
+            
             for (int j = 0; j < k; j++) // Pour chaque id_voisin
             {
                 int distance = sqrt(square_distances_to_neighbors[j]); // La distance entre le voisin courant et le sommet initial
 
-                switch (kernel_type)
-                {
-                case 0: // Cas interpoled
-                    weight = interpole(range, distance);
-                    break;
+                if(kernel_type == 0){
+                    weight = interpole(radius, distance);
+                }
 
-                case 1: // Cas gaussienne
-                    weight = gaussienne(range, distance);
+                if(kernel_type == 1){
 
-                    break;
+                    weight = gaussienne(radius, distance);
 
-                default: // Cas Wendland
-                    weight = wendland(range, distance);
+                }
+
+                if(kernel_type == 2){
+
+                    weight = wendland(radius, distance);
                 }
                 sum_w += weight;
 
@@ -339,10 +349,17 @@ void draw()
     glPointSize(2); // for example...
 
     glColor3f(0.8, 0.8, 1);
+    if(showmesh)
     drawPointSet(positions, normals); // Dessin du mesh initial via nuage de point
 
     glColor3f(1, 0.5, 0.5);
+    if(mod == 0)
     drawPointSet(positions2, normals2);
+    if(mod == 1)
+    drawPointSet(positions3, normals3);
+    if (mod ==2) 
+    drawPointSet(positions4,normals4);
+
 }
 
 //Affiche dans la frame le draw des nuages de points
@@ -387,6 +404,20 @@ void key(unsigned char keyPressed, int x, int y)
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         else
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        break;
+
+    case 's':
+        showmesh = !showmesh;
+        break;
+
+        case 'd':
+        mod = (mod +1) % 3;
+        if(mod == 0)
+        std::cout<<" Mode : Interpoled"<<std::endl;
+        if(mod ==1)
+        std::cout<<" Mode : Gaussienne"<<std::endl;
+        if(mod==2)
+        std::cout<<" Mode : WendLand"<<std::endl;
         break;
 
     default:
@@ -485,7 +516,7 @@ int main(int argc, char **argv)
     {
         // Load a first pointset, and build a kd-tree:
         loadPN("pointsets/dino_subsampled_extreme.pn", positions, normals);
-
+        //applyRandomRigidTransformation(positions,normals);
         BasicANNkdTree kdtree;
         kdtree.build(positions); // Construction du kd tree a partir des positions
 
@@ -499,17 +530,46 @@ int main(int argc, char **argv)
         for (unsigned int pIt = 0; pIt < positions2.size(); ++pIt)
         {
             positions2[pIt] = Vec3(
-                -0.6 + 1.2 * (double)(rand()) / (double)(RAND_MAX),
-                -0.6 + 1.2 * (double)(rand()) / (double)(RAND_MAX),
-                -0.6 + 1.2 * (double)(rand()) / (double)(RAND_MAX));
+                 -0.6 + 1.2 * (double)(rand()) / (double)(RAND_MAX),
+                 -0.6 + 1.2 * (double)(rand()) / (double)(RAND_MAX),
+                 -0.6 + 1.2 * (double)(rand()) / (double)(RAND_MAX));
 
             positions2[pIt].normalize();
             positions2[pIt] = 0.6 * positions2[pIt];
         }
 
+        positions3.resize(20000);
+        normals3.resize(positions3.size());
+
+                for (unsigned int pIt = 0; pIt < positions3.size(); ++pIt)
+        {
+            positions3[pIt] = Vec3(
+                 -0.6 + 1.2 * (double)(rand()) / (double)(RAND_MAX),
+                 -0.6 + 1.2 * (double)(rand()) / (double)(RAND_MAX),
+                 -0.6 + 1.2 * (double)(rand()) / (double)(RAND_MAX));
+
+            positions3[pIt].normalize();
+            positions3[pIt] = 0.6 * positions3[pIt];
+        }
+
+        positions4.resize(20000);
+        normals4.resize(positions4.size());
+                for (unsigned int pIt = 0; pIt < positions4.size(); ++pIt)
+        {
+            positions4[pIt] = Vec3(
+                 -0.6 + 1.2 * (double)(rand()) / (double)(RAND_MAX),
+                 -0.6 + 1.2 * (double)(rand()) / (double)(RAND_MAX),
+                 -0.6 + 1.2 * (double)(rand()) / (double)(RAND_MAX));
+
+            positions4[pIt].normalize();
+            positions4[pIt] = 0.6 * positions4[pIt];
+        }
         // PROJECT USING MLS (HPSS and APSS):
         // TODO : Il faut faire se projetter les points secondaires sur la surface hypothétiquement definie par les sommet primaire
-        HPSS(positions, normals, positions2, normals2, kdtree, 2, 1, 10);
+        HPSS(positions, normals, positions2, normals2, kdtree, 0, 1, 3);
+        HPSS(positions, normals, positions3, normals3, kdtree, 1, 1, 3);
+        HPSS(positions, normals, positions4, normals4, kdtree, 2, 1, 3);
+
     }
 
     glutMainLoop();
