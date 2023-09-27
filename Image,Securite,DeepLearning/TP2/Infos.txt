@@ -1,0 +1,26 @@
+
+Objectif et contexte : Voir des méthodes de chiffrement avancés - AES et ses modes
+Image de base c quoi 
+clef utilisés et vecteur d'initialisation utilisés
+
+Paterne pour chaque partie
+ explication + schema wiki
+Resultat de base et cryptage
+PSNR + entropie
+Histogramme
+resistance au bruit : img bruitée + 
+
+Avant tout, AES c quoi ? 
+
+1/ AES de base par bloc - ECB
+
+2/ CBC
+
+3/ CFB 
+
+4/ OFB
+
+Conclusion: Cool des méthodes interessantes et OFB bien que sensiblement basique (ou exclusif avec un calque) tient mieux la route pour la gestion du bruit
+
+
+
