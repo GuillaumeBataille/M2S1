@@ -1,0 +1,11 @@
+Main code (se placer dans src) :
+g++ TP3.cpp -o exe && ./exe img1.pgm
+
+Changer d'image -> Remplacer img1.pgm dans in
+
+Output -> Le message binaire - les 8 images avec msg inseré - les 8 plans de img1 avant insertion - les 8 message extraits
+
+Histogramme facilités - aller dans le dossier dat, pas depuis l'IDE mais y ouvrir un terminal :
+python ploter.py X
+X = Plan qu'on souhaite étudier
+Cela va sortir deux histo superposé, l'histogramme de img1.pgm et l'histogramme de img1 avec le message inséré dans le plan X.

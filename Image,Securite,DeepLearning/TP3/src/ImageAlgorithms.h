@@ -1495,11 +1495,17 @@ namespace ImageAlgorithms
 
     void setBinaryPlane(unsigned char *imgIn, int index, int plane, bool val)
     {
-        // Créer un masque avec la valeur au nième bit
-        // Ou binaire
+        // Crée un masque avec le nième bit à 1, les autres bits à 0
+        unsigned char mask = 1 << plane;
 
-        unsigned char mask = val ? (1 << plane) : 0;
-        imgIn[index] = imgIn[index] | mask;
+        if (val)
+        {
+            imgIn[index] = imgIn[index] | mask; // Définit le nième bit à 1 si val est true
+        }
+        else
+        {
+            imgIn[index] = imgIn[index] & ~mask; // Met le nième bit à 0 si val est false
+        }
     }
 
 } // namespace ImageAlgorithms
