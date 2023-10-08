@@ -4,12 +4,12 @@
 #include "ImageAlgorithms.h"
 #include "color.h"
 #include "image_ppm.h"
-#include "Filters.h"
 #include <iostream>
 #include <limits>
 #include <random>
 #include <stdio.h>
 #include <vector>
+#include <sstream>
 
 int main(int argc, char *argv[])
 {
@@ -36,38 +36,70 @@ int main(int argc, char *argv[])
     nTaille = nH * nW;
     int nTaille3 = nTaille * 3;
 
-    allocation_tableau(ImgIn, OCTET, nTaille);
-
-    lire_image_pgm(inputName, ImgIn, nH * nW);
-
+    allocation_tableau(ImgIn, OCTET, nTaille3);
+    lire_image_ppm(inputName,ImgIn,nTaille);
+    //ecrire_image_ppm("../out/test.ppm", ImgIn, nH ,nW);
     // --------------------- Pré Traitement --------------------- //
 
     std::cout << std::endl;
 
     int size_filter = 5;
-    allocation_tableau(ImgOut, OCTET, (nW - size_filter + 1) * (nH - size_filter + 1));
+    int pooling_size = 2;
+    int width_out = (nW - size_filter + 1);
+    int height_out = (nH - size_filter + 1);
+    int size_out= width_out * height_out;
 
-    ImageAlgorithms::ConvolutionWithFilter(ImgIn, ImgOut, nW, nH, flou_moyen_5x5, size_filter);
-    ecrire_image_pgm("../out/flou_moyen5x5.pgm", ImgOut, nH - size_filter + 1, nW - size_filter + 1);
+    std::vector<OCTET*> ListofImagesPlane = ImageAlgorithms::getImageFromFolder("../in/plane/", 32, 32);
+    std::vector<OCTET*> ListofImagesCars = ImageAlgorithms::getImageFromFolder("../in/cars/", 32, 32);
 
-    ImageAlgorithms::ConvolutionWithFilter(ImgIn, ImgOut, nW, nH, gaussien_5x5, size_filter);
-    ecrire_image_pgm("../out/gaussien_5x5.pgm", ImgOut, nH - size_filter + 1, nW - size_filter + 1);
+    std::vector<OCTET*> ListofImages = ListofImagesPlane;
 
-    ImageAlgorithms::ConvolutionWithFilter(ImgIn, ImgOut, nW, nH, contours_5x5, size_filter);
-    ecrire_image_pgm("../out/contours_5x5.pgm", ImgOut, nH - size_filter + 1, nW - size_filter + 1);
+    for (int i = 0; i< ListofImagesCars.size();i++)
+    {
+       ListofImages.push_back(ListofImagesCars[i]);
+    }
 
-    ImageAlgorithms::ConvolutionWithFilter(ImgIn, ImgOut, nW, nH, embossage_5x5, size_filter);
-    ecrire_image_pgm("../out/embossage_5x5.pgm", ImgOut, nH - size_filter + 1, nW - size_filter + 1);
 
-    ImageAlgorithms::ConvolutionWithFilter(ImgIn, ImgOut, nW, nH, renforcement_bords_5x5, 5);
-    ecrire_image_pgm("../out/renforcement_bords_5x5.pgm", ImgOut, nH - size_filter + 1, nW - size_filter + 1);
+    ImageAlgorithms::CNN(ListofImages,size_filter, pooling_size,2,nW,nH); // CNN a 2 couches
 
-    ImageAlgorithms::maxPooling(ImgIn, ImgOut, nW, nH, 2);
-    ecrire_image_pgm("../out/PoolingMax_2.pgm", ImgOut, nH / 2, nW / 2);
+    OCTET * FlattenedVector = ImageAlgorithms::concatImg(ListofImages,5,5); // Le vecteur applatit
 
-    ImageAlgorithms::maxPooling(ImgIn, ImgOut, nW, nH, 4);
-    ecrire_image_pgm("../out/PoolingMax_4.pgm", ImgOut, nH / 4, nW / 4);
+    ecrire_image_ppm("../out/FlattenedVector.ppm", FlattenedVector,1,1000);
+    
+    std::vector<double> Result = ImageAlgorithms::CNN_Output(FlattenedVector,2,ListofImages.size()*5*5*3);
+    std::vector<double> Result_softMaxed = ImageAlgorithms::softmax(Result);
+    
+    std::cout<<"Classe Plane "<< Result_softMaxed[0]<<std::endl;
+    std::cout<<"Classe Cars "<< Result_softMaxed[1]<<std::endl;
 
+
+    //Test des Convolutions pour Compte rendu
+    allocation_tableau(ImgOut, OCTET, 3*size_out);
+
+    ImageAlgorithms::ConvolutionWithFilterRGB(ImgIn, ImgOut, nW, nH, flou_moyen_5x5, size_filter);
+    ecrire_image_ppm("../out/flou_moyen5x5.ppm", ImgOut, height_out, height_out);
+
+    ImageAlgorithms::ConvolutionWithFilterRGB(ImgIn, ImgOut, nW, nH, gaussien_5x5, size_filter);
+    ecrire_image_ppm("../out/gaussien_5x5.pgm", ImgOut, height_out, height_out);
+
+    ImageAlgorithms::ConvolutionWithFilterRGB(ImgIn, ImgOut, nW, nH, contours_5x5, size_filter);
+    ecrire_image_ppm("../out/contours_5x5.pgm", ImgOut, height_out, height_out);
+
+    ImageAlgorithms::ConvolutionWithFilterRGB(ImgIn, ImgOut, nW, nH, embossage_5x5, size_filter);
+    ecrire_image_ppm("../out/embossage_5x5.pgm", ImgOut, height_out, height_out);
+
+    ImageAlgorithms::ConvolutionWithFilterRGB(ImgIn, ImgOut, nW, nH, renforcement_bords_5x5, size_filter);
+    ecrire_image_ppm("../out/renforcement_bords_5x5.pgm", ImgOut, height_out, height_out);
+
+    ImageAlgorithms::maxPoolingRGB(ImgIn, ImgOut, nW, nH, 2);
+    ecrire_image_ppm("../out/PoolingMax_2.pgm", ImgOut, nH / 2, nW / 2);
+
+    ImageAlgorithms::maxPoolingRGB(ImgIn, ImgOut, nW, nH, 4);
+    ecrire_image_ppm("../out/PoolingMax_4.pgm", ImgOut, nH / 4, nW / 4);
+
+for(OCTET* img : ListofImages){
+        free(img);
+    }
     free(ImgIn);
     free(ImgOut);
 

@@ -6,6 +6,7 @@
 #define CODAGE_IMAGEALGORITHMS_H
 
 #include "color.h"
+#include "Filters.h"
 #include <fstream>
 #include <iostream>
 #include <limits>
@@ -14,6 +15,7 @@
 #include <stack>
 #include <unordered_map>
 #include <vector>
+#include <filesystem>
 
 namespace ImageAlgorithms
 {
@@ -1539,6 +1541,7 @@ namespace ImageAlgorithms
         int new_nH = nH - range_reduce;
         // allocation_tableau(ImgOut, OCTET, new_nW * new_nH); // Allocation du nouveau tableau de taille réduite
 
+  
         for (int i = range_reduce / 2; i < nH - range_reduce / 2; i++) // Parcourir les lignes de l'image d'entrée en tenant compte du décalage du filtre
         {
             for (int j = range_reduce / 2; j < nW - range_reduce / 2; j++) // Parcourir les colonnes de l'image d'entrée en tenant compte du décalage du filtre
@@ -1581,6 +1584,273 @@ namespace ImageAlgorithms
             }
         }
     }
+
+
+typedef struct {
+    OCTET R, G, B;
+} PixelRGB;
+
+PixelRGB applyFilterRGB(OCTET *ImgIn, int nW, int nH, float *filter, int filter_size, int x, int y)
+{
+    int range_reduce = filter_size - 1;
+    float sumR = 0, sumG = 0, sumB = 0;
+
+    for (int i = 0; i < filter_size; i++)
+    {
+        for (int j = 0; j < filter_size; j++)
+        {
+            int imgX = x + i - range_reduce / 2;
+            int imgY = y + j - range_reduce / 2;
+            float filterValue = filter[i * filter_size + j];
+
+            if (imgX >= 0 && imgX < nH && imgY >= 0 && imgY < nW)
+            {
+                int imgId = (imgX * nW + imgY) * 3; // Chaque pixel a 3 canaux (R, G, B)
+                sumR += ImgIn[imgId] * filterValue;
+                sumG += ImgIn[imgId + 1] * filterValue;
+                sumB += ImgIn[imgId + 2] * filterValue;
+            }
+        }
+    }
+
+    PixelRGB result;
+    result.R = (OCTET)(sumR < 0 ? 0 : (sumR > 255 ? 255 : sumR));
+    result.G = (OCTET)(sumG < 0 ? 0 : (sumG > 255 ? 255 : sumG));
+    result.B = (OCTET)(sumB < 0 ? 0 : (sumB > 255 ? 255 : sumB));
+    return result;
+}
+
+void ConvolutionWithFilterRGB(OCTET *ImgIn, OCTET *ImgOut, int nW, int nH, float *filter, int filter_size)
+{
+    int range_reduce = filter_size - 1;
+    int new_nW = nW - range_reduce;
+    int new_nH = nH - range_reduce;
+
+    for (int i = range_reduce / 2; i < nH - range_reduce / 2; i++)
+    {
+        for (int j = range_reduce / 2; j < nW - range_reduce / 2; j++)
+        {
+            int id_in = ((i * nW + j) * 3);
+            int id_out = ((((i - range_reduce / 2) * new_nW) + (j - range_reduce / 2)) * 3); 
+            PixelRGB result = applyFilterRGB(ImgIn, nW, nH, filter, filter_size, i, j);
+            ImgOut[id_out] = result.R; // Canal rouge (R)
+            ImgOut[id_out+1] = result.G;     // Canal vert (G)
+            ImgOut[id_out + 2] = result.B; // Canal bleu (B)
+        }
+    }
+}
+
+void maxPoolingRGB(OCTET *ImgIn, OCTET *ImgOut, int nW, int nH, int poolSize)
+{
+    int new_nW = nW / poolSize;
+    int new_nH = nH / poolSize;
+    int channelSize = 3; // Nombre de canaux RGB
+
+    for (int i = 0; i < new_nH; i++)
+    {
+        for (int j = 0; j < new_nW; j++)
+        {
+            int maxR = 0, maxG = 0, maxB = 0;
+
+            for (int m = 0; m < poolSize; m++)
+            {
+                for (int n = 0; n < poolSize; n++)
+                {
+                    int imgX = i * poolSize + m;
+                    int imgY = j * poolSize + n;
+                    int imgId = (imgX * nW + imgY) * channelSize;
+
+                    if (ImgIn[imgId] > maxR)
+                    {
+                        maxR = ImgIn[imgId];
+                    }
+
+                    if (ImgIn[imgId + 1] > maxG)
+                    {
+                        maxG = ImgIn[imgId + 1];
+                    }
+
+                    if (ImgIn[imgId + 2] > maxB)
+                    {
+                        maxB = ImgIn[imgId + 2];
+                    }
+                }
+            }
+
+            int outId = (i * new_nW + j) * channelSize;
+            ImgOut[outId] = maxR;
+            ImgOut[outId + 1] = maxG;
+            ImgOut[outId + 2] = maxB;
+        }
+    }
+}
+
+
+std::vector<double> CNN_Output(OCTET* FlattenedVector, int NbrofNeuronsOutput, int vectorSize)
+{
+    std::vector<double> result;
+    result.resize(NbrofNeuronsOutput);
+
+    // Initialisation du générateur de nombres pseudo-aléatoires
+    srand(time(0));
+
+    for (int i = 0; i < NbrofNeuronsOutput; i++) // Pour chaque neurone
+    {
+        int weight_sum = 0;
+        double sum = 0.0; // Initialisez sum comme un double
+
+        for (int j = 0; j < vectorSize; j++) // Pour chaque élément du flattened
+        {
+            int weight = rand() % 500; // 500 arbitraire
+            weight_sum += weight;
+            sum += FlattenedVector[j] * weight;
+        }
+
+        // Assurez-vous que weight_sum n'est pas égal à zéro avant la division
+        if (weight_sum != 0) {
+            result[i] = sum / static_cast<double>(weight_sum * 255);
+        } else {
+            result[i] = 0.0; // Ou une valeur par défaut appropriée en cas de weight_sum égal à zéro
+        }
+    }
+
+    return result;
+}
+
+
+void CNN(std::vector<OCTET *> &ListofImages ,int FilterSize, int PoolingSize, int CNNLayers, int nW, int nH)
+{   
+    int NW = nW;
+    int NH = nH;
+        std::vector<OCTET*> ListofTemp; 
+        int nW_Convo = NW - FilterSize + 1;
+        int nH_Convo = NH - FilterSize + 1;
+        int size_Convo= nW_Convo * nH_Convo * 3; // x3 car RGB
+        int nW_Pooling = nW_Convo/PoolingSize;
+        int nH_Pooling = nH_Convo/PoolingSize;
+        int size_Pooling = nW_Pooling * nH_Pooling *3 ;// x3 car RGB
+
+        OCTET* ImgConvo;
+        allocation_tableau(ImgConvo,OCTET,size_Convo);
+        
+        OCTET* ImgPooling;
+        allocation_tableau(ImgPooling,OCTET,size_Pooling);
+
+    for(int i =0; i<CNNLayers; i++) // Pour chaque couche de mon layer
+    {     
+        for(int j = 0; j < 1; j++) // Pour chaque image courante 
+        {              
+            { // Un layer de CNN avec 5 Convolutions suivi de Pooling
+            ConvolutionWithFilterRGB(ListofImages[j],ImgConvo,NW,NH,flou_moyen_5x5,FilterSize);
+            maxPoolingRGB(ImgConvo, ImgPooling, nW_Convo, nH_Convo, PoolingSize);
+            ListofTemp.push_back(ImgPooling);
+            allocation_tableau(ImgConvo,OCTET,size_Convo);
+            allocation_tableau(ImgPooling,OCTET,size_Pooling);
+            
+            ConvolutionWithFilterRGB(ListofImages[j],ImgConvo,NW,NH,gaussien_5x5,FilterSize);
+            maxPoolingRGB(ImgConvo, ImgPooling, nW_Convo, nH_Convo, PoolingSize);
+            ListofTemp.push_back(ImgPooling);
+            allocation_tableau(ImgConvo,OCTET,size_Convo);
+            allocation_tableau(ImgPooling,OCTET,size_Pooling);
+            
+            ConvolutionWithFilterRGB(ListofImages[j],ImgConvo,NW,NH,contours_5x5,FilterSize);
+            maxPoolingRGB(ImgConvo, ImgPooling, nW_Convo, nH_Convo, PoolingSize);
+            ListofTemp.push_back(ImgPooling);
+            allocation_tableau(ImgConvo,OCTET,size_Convo);
+            allocation_tableau(ImgPooling,OCTET,size_Pooling);
+            
+            ConvolutionWithFilterRGB(ListofImages[j],ImgConvo,NW,NH,renforcement_bords_5x5,FilterSize);
+            maxPoolingRGB(ImgConvo, ImgPooling, nW_Convo, nH_Convo, PoolingSize);
+            ListofTemp.push_back(ImgPooling);
+            allocation_tableau(ImgConvo,OCTET,size_Convo);
+            allocation_tableau(ImgPooling,OCTET,size_Pooling);
+            
+            ConvolutionWithFilterRGB(ListofImages[j],ImgConvo,NW,NH,embossage_5x5,FilterSize);
+            maxPoolingRGB(ImgConvo, ImgPooling, nW_Convo, nH_Convo, PoolingSize);
+            ListofTemp.push_back(ImgPooling);
+            allocation_tableau(ImgConvo,OCTET,size_Convo);
+            allocation_tableau(ImgPooling,OCTET,size_Pooling);
+            }
+        }
+        ListofImages.clear();
+
+        ListofImages = ListofTemp;
+        NW = nW_Pooling;
+        NH = nH_Pooling;
+        ListofTemp.clear();
+    }
+
+};
+
+std::vector<OCTET*> getImageFromFolder(std::string path, int nH, int nW)
+{
+    std::vector<OCTET*> a;
+
+    try {
+        for (const auto& entry : std::filesystem::directory_iterator(path)) {
+            if (std::filesystem::is_regular_file(entry)) {
+                //std::cout << entry.path().filename() << std::endl;
+
+                OCTET* img;
+
+                allocation_tableau(img, OCTET, (nH * nW)*3);
+                lire_image_ppm(path + "/" + entry.path().filename().string(), img, nH * nW);
+
+                a.push_back(img);
+            }
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Erreur : " << e.what() << std::endl;
+    }
+    return a;
+};
+
+OCTET* concatImg(std::vector<OCTET*> tab, int nH, int nW)
+{
+
+    int numChannels = 3; // 3 car RGB
+    OCTET* concat;
+    allocation_tableau(concat, OCTET, nH * nW * numChannels * tab.size());
+
+    long int counter = 0;
+
+        for (OCTET* img : tab) {
+            for (int i = 0; i < nH * nW; ++i) {
+                    for (int c = 0; c < numChannels; ++c) {
+                concat[counter] = img[numChannels * i + c]; // Copie le composant c du pixel i
+                counter++;
+            }
+        }
+    }
+
+    return concat;
+}
+
+std::vector<double> softmax(const std::vector<double>& input) {
+    std::vector<double> result;
+    result.reserve(input.size());
+
+    double max_val = input[0]; // Supposons que le premier élément soit le maximum initial
+    double sum_exp = 0.0;
+
+    for (double x : input) {
+        if (x > max_val) {
+            max_val = x;
+        }
+    }
+
+    for (double x : input) {
+        double e_x = std::exp(x - max_val); // Évite les problèmes de stabilité numérique
+        result.push_back(e_x);
+        sum_exp += e_x;
+    }
+
+    for (double& value : result) {
+        value /= sum_exp;
+    }
+
+    return result;
+}
 
 } // namespace ImageAlgorithms
 
