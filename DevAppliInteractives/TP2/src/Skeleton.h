@@ -253,15 +253,59 @@ struct Skeleton
 
     void updateIKChain(SkeletonTransformation &transfoIK, unsigned int targetArticulation, Vec3 targetPosition, unsigned int maxIterNumber = 20, double epsilonPrecision = 0.000001)
     {
-        //---------------------------------------------------//
-        //---------------------------------------------------//
-        // code to change :
+        // updateCoord(transfoIK);
+        bool loopbreak = false;
 
-        // You should orient the articulation towards target position: -> find R
-        // Note: you can use Mat3::getRotationMatrixAligning
-        //---------------------------------------------------//
-        //---------------------------------------------------//
-        //---------------------------------------------------//
+        int currentArti_i = targetArticulation;
+        int currentBone_i = articulations[currentArti_i].fatherBone;
+        Vec3 boneEnd = transfoIK.articulations_transformed_position[targetArticulation];
+
+        // s'arrêtte à maxIter
+        // Cyclic Coordinates Descend
+        for (int it = 0; it < maxIterNumber; it++)
+        {
+            int boneEnd_i = bones[currentBone_i].joints[1];
+
+            while (!loopbreak)
+            {
+                // ------------- traitement ------------- //
+
+                if ((targetPosition - articulations[targetArticulation].p).length() < epsilonPrecision)
+                {
+                    std::cout << "Trop colle" << std::endl;
+                    return;
+                }
+
+                int boneRoot_i = bones[currentBone_i].joints[0];
+
+                Vec3 oldBoneEnd = boneEnd;
+                // std::cout << "boneEnd : " << boneEnd.toString() << std::endl;
+                Vec3 boneRoot = transfoIK.articulations_transformed_position[boneRoot_i];
+                // Vec3 boneRoot = articulations[boneRoot_i].p;
+
+                Vec3 targetVec = targetPosition - boneRoot;
+                targetVec.normalize();
+                Vec3 hingeToTargetArti = boneEnd - boneRoot;
+                hingeToTargetArti.normalize();
+                Mat3 rotMat = Mat3::getRotationMatrixAligning(hingeToTargetArti, targetVec);
+
+                // rotateBoneAndChilds_UpdateTransfo(currentBone_i, transfoIK, rotMat);
+                transfoIK.bone_transformations[currentBone_i].localRotation = rotMat;
+                computeGlobalTransformationParameters(transfoIK);
+
+                currentArti_i = bones[currentBone_i].joints[0];
+                currentBone_i = bones[currentBone_i].fatherBone;
+
+                if (currentBone_i == -1)
+                {
+                    loopbreak = true;
+                }
+            }
+
+            currentArti_i = targetArticulation;
+            currentBone_i = articulations[currentArti_i].fatherBone;
+            loopbreak = false;
+        }
     }
 
     //----------------------------------------------//

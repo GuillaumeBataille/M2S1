@@ -128,6 +128,7 @@ void display()
 
 void moveTargetArticulationBy(Vec3 translation)
 {
+    std::cout << "Is moving" << std::endl;
     if (targetArticulation > -1 && targetArticulation < skeleton.articulations.size())
     {
         Vec3 newPos = skeletonTransfoIK.articulations_transformed_position[targetArticulation] + translation;
@@ -167,25 +168,25 @@ void key(unsigned char keyPressed, int x, int y)
     case 's':
         if (displayMode == 2)
         {
-            moveTargetArticulationBy(0.1 * Vec3(0, 0, -1));
+            moveTargetArticulationBy(0.01 * Vec3(0, 0, -1));
         }
         break;
     case 'z':
         if (displayMode == 2)
         {
-            moveTargetArticulationBy(0.1 * Vec3(0, 0, 1));
+            moveTargetArticulationBy(0.01 * Vec3(0, 0, 1));
         }
         break;
     case 'q':
         if (displayMode == 2)
         {
-            moveTargetArticulationBy(0.1 * Vec3(-1, 0, 0));
+            moveTargetArticulationBy(0.01 * Vec3(-1, 0, 0));
         }
         break;
     case 'd':
         if (displayMode == 2)
         {
-            moveTargetArticulationBy(0.1 * Vec3(1, 0, 0));
+            moveTargetArticulationBy(0.01 * Vec3(1, 0, 0));
         }
         break;
     case 'm':
@@ -267,7 +268,7 @@ void mouse(int button, int state, int x, int y)
             mouseRotatePressed = false;
             mouseZoomPressed = false;
         }
-        else if (button == GLUT_MIDDLE_BUTTON)
+        else if (button == GLUT_KEY_F6)
         {
             if (mouseZoomPressed == false)
             {

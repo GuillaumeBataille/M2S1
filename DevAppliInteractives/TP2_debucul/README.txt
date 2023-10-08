@@ -1,0 +1,3 @@
+- appuyer sur m 2x pour passer en mode IK
+- flèche droite/gauche pour sélectioner l'articulation a bouger
+- azeqsd pour bouger le point target

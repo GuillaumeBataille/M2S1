@@ -29,7 +29,7 @@
 #include "src/Camera.h"
 #include "src/jmkdtree.h"
 
-std::vector<Vec3> positions; //Vector de positions
+std::vector<Vec3> positions; // Vector de positions
 std::vector<Vec3> normals;   // Vector de normales
 
 std::vector<Vec3> positions2; // Vector de positions secondaire
@@ -44,7 +44,7 @@ std::vector<Vec3> normals4;   // Vector de normales secondaire
 // OpenGL/GLUT application code.
 // -------------------------------------------
 
-//Parametrage de l'environnement et de la fenetre
+// Parametrage de l'environnement et de la fenetre
 static GLint window;
 static unsigned int SCREENWIDTH = 640;
 static unsigned int SCREENHEIGHT = 480;
@@ -59,7 +59,7 @@ int mod = 0;
 // ------------------------------------------------------------------------------------------------------------
 // i/o and some stuff
 // ------------------------------------------------------------------------------------------------------------
-//Fonction pour charger un nuage de point (Pos + normals) via un path vers un .pn
+// Fonction pour charger un nuage de point (Pos + normals) via un path vers un .pn
 void loadPN(const std::string &filename, std::vector<Vec3> &o_positions, std::vector<Vec3> &o_normals)
 {
     unsigned int surfelSize = 6;
@@ -89,7 +89,7 @@ void loadPN(const std::string &filename, std::vector<Vec3> &o_positions, std::ve
     delete[] pn;
 }
 
-//Fonction pour sauvegarder un nuage de point (Pos + normals) via un path vers un .pn
+// Fonction pour sauvegarder un nuage de point (Pos + normals) via un path vers un .pn
 void savePN(const std::string &filename, std::vector<Vec3> const &o_positions, std::vector<Vec3> const &o_normals)
 {
     if (o_positions.size() != o_normals.size())
@@ -111,12 +111,12 @@ void savePN(const std::string &filename, std::vector<Vec3> const &o_positions, s
     fclose(outfile);
 }
 
-//Recentrer et aligner sur l'axe principal
+// Recentrer et aligner sur l'axe principal
 void scaleAndCenter(std::vector<Vec3> &io_positions)
 {
     Vec3 bboxMin(FLT_MAX, FLT_MAX, FLT_MAX);
     Vec3 bboxMax(FLT_MIN, FLT_MIN, FLT_MIN);
-    //Calcul des bbboxmin et max dans le nuage de points
+    // Calcul des bbboxmin et max dans le nuage de points
     for (unsigned int pIt = 0; pIt < io_positions.size(); ++pIt)
     {
         for (unsigned int coord = 0; coord < 3; ++coord)
@@ -140,11 +140,11 @@ void applyRandomRigidTransformation(std::vector<Vec3> &io_positions, std::vector
     Mat3 R = Mat3::RandRotation();
     Vec3 t = Vec3::Rand(1.f);
     for (unsigned int pIt = 0; pIt < io_positions.size(); ++pIt)
-    {   
-    double x = (double)(rand()) / (double)(RAND_MAX);
-    double y = (double)(rand()) / (double)(RAND_MAX);
-    double z = (double)(rand()) / (double)(RAND_MAX);
-        //t = Vec3(0.02*x,0.02*y,0.02*z);
+    {
+        double x = (double)(rand()) / (double)(RAND_MAX);
+        double y = (double)(rand()) / (double)(RAND_MAX);
+        double z = (double)(rand()) / (double)(RAND_MAX);
+        // t = Vec3(0.02*x,0.02*y,0.02*z);
         io_positions[pIt] = R * io_positions[pIt] + t;
         io_normals[pIt] = R * io_normals[pIt];
     }
@@ -171,7 +171,7 @@ void subsample(std::vector<Vec3> &i_positions, std::vector<Vec3> &i_normals, flo
     i_normals = newNormals;
 }
 
-//Save la liste des sommets et la liste des triangles dans un file au path donné
+// Save la liste des sommets et la liste des triangles dans un file au path donné
 bool save(const std::string &filename, std::vector<Vec3> &vertices, std::vector<unsigned int> &triangles)
 {
     std::ofstream myfile;
@@ -208,19 +208,19 @@ void project(Vec3 point_input, Vec3 &point_output, Vec3 &normal_output, Vec3 cen
     normal_output = normal;
 }
 
-//LES NOYAUX (les différents poids qu'on souhaite utiliser):
+// LES NOYAUX (les différents poids qu'on souhaite utiliser):
 
-//Interpolante
+// Interpolante
 double interpole(double r, double d, int s = 2)
 {
     return pow(r / d, s);
 }
-//Gaussienne
+// Gaussienne
 double gaussienne(double r, double d)
 {
     return (exp(-(d * d) / r * r));
 }
-//Wendland
+// Wendland
 double wendland(double r, double d)
 {
     return ((1 - pow(d / 2, 4)) * (1 + (4 * (d / r))));
@@ -242,22 +242,24 @@ void HPSS(std::vector<Vec3> positions, std::vector<Vec3> normals, std::vector<Ve
             double sum_w = 0.0;
             int weight;
             double max_dist = 0;
-            
+
             for (int j = 0; j < k; j++) // Pour chaque id_voisin
             {
                 int distance = sqrt(square_distances_to_neighbors[j]); // La distance entre le voisin courant et le sommet initial
 
-                if(kernel_type == 0){
+                if (kernel_type == 0)
+                {
                     weight = interpole(radius, distance);
                 }
 
-                if(kernel_type == 1){
+                if (kernel_type == 1)
+                {
 
                     weight = gaussienne(radius, distance);
-
                 }
 
-                if(kernel_type == 2){
+                if (kernel_type == 2)
+                {
 
                     weight = wendland(radius, distance);
                 }
@@ -282,7 +284,7 @@ void HPSS(std::vector<Vec3> positions, std::vector<Vec3> normals, std::vector<Ve
 // rendering.
 // ------------------------------------------------------------------------------------------------------------
 
-//Initialiser les lights
+// Initialiser les lights
 void initLight()
 {
     GLfloat light_position1[4] = {22.0f, 16.0f, 50.0f, 0.0f};
@@ -299,7 +301,7 @@ void initLight()
     glEnable(GL_LIGHTING);
 }
 
-//Initialiser l'environnement du rendu
+// Initialiser l'environnement du rendu
 void init()
 {
     camera.resize(SCREENWIDTH, SCREENHEIGHT);
@@ -312,7 +314,7 @@ void init()
     glEnable(GL_COLOR_MATERIAL);
 }
 
-//Dessiner des triangles a partir des vector de de positions et d'une liste d'indices de position (triangle)
+// Dessiner des triangles a partir des vector de de positions et d'une liste d'indices de position (triangle)
 void drawTriangleMesh(std::vector<Vec3> const &i_positions, std::vector<unsigned int> const &i_triangles)
 {
     glBegin(GL_TRIANGLES);
@@ -331,7 +333,7 @@ void drawTriangleMesh(std::vector<Vec3> const &i_positions, std::vector<unsigned
     glEnd();
 }
 
-//Dessiner a partir de liste de sommets et de normales (nuage de points)
+// Dessiner a partir de liste de sommets et de normales (nuage de points)
 void drawPointSet(std::vector<Vec3> const &i_positions, std::vector<Vec3> const &i_normals)
 {
     glBegin(GL_POINTS);
@@ -343,26 +345,25 @@ void drawPointSet(std::vector<Vec3> const &i_positions, std::vector<Vec3> const 
     glEnd();
 }
 
-//La fonction draw qui dessiner les nuages de points primaire et secondaire
+// La fonction draw qui dessiner les nuages de points primaire et secondaire
 void draw()
 {
     glPointSize(2); // for example...
 
     glColor3f(0.8, 0.8, 1);
-    if(showmesh)
-    drawPointSet(positions, normals); // Dessin du mesh initial via nuage de point
+    if (showmesh)
+        drawPointSet(positions, normals); // Dessin du mesh initial via nuage de point
 
     glColor3f(1, 0.5, 0.5);
-    if(mod == 0)
-    drawPointSet(positions2, normals2);
-    if(mod == 1)
-    drawPointSet(positions3, normals3);
-    if (mod ==2) 
-    drawPointSet(positions4,normals4);
-
+    if (mod == 0)
+        drawPointSet(positions2, normals2);
+    if (mod == 1)
+        drawPointSet(positions3, normals3);
+    if (mod == 2)
+        drawPointSet(positions4, normals4);
 }
 
-//Affiche dans la frame le draw des nuages de points
+// Affiche dans la frame le draw des nuages de points
 void display()
 {
     glLoadIdentity();
@@ -373,13 +374,13 @@ void display()
     glutSwapBuffers();
 }
 
-//En attente de redraw, de redisplay
+// En attente de redraw, de redisplay
 void idle()
 {
     glutPostRedisplay();
 }
 
-//Gestion des inputs keyboard
+// Gestion des inputs keyboard
 void key(unsigned char keyPressed, int x, int y)
 {
     switch (keyPressed)
@@ -410,14 +411,14 @@ void key(unsigned char keyPressed, int x, int y)
         showmesh = !showmesh;
         break;
 
-        case 'd':
-        mod = (mod +1) % 3;
-        if(mod == 0)
-        std::cout<<" Mode : Interpoled"<<std::endl;
-        if(mod ==1)
-        std::cout<<" Mode : Gaussienne"<<std::endl;
-        if(mod==2)
-        std::cout<<" Mode : WendLand"<<std::endl;
+    case 'd':
+        mod = (mod + 1) % 3;
+        if (mod == 0)
+            std::cout << " Mode : Interpoled" << std::endl;
+        if (mod == 1)
+            std::cout << " Mode : Gaussienne" << std::endl;
+        if (mod == 2)
+            std::cout << " Mode : WendLand" << std::endl;
         break;
 
     default:
@@ -426,7 +427,7 @@ void key(unsigned char keyPressed, int x, int y)
     idle();
 }
 
-//Gestion de la souris (molette)
+// Gestion de la souris (molette)
 void mouse(int button, int state, int x, int y)
 {
     if (state == GLUT_UP)
@@ -466,7 +467,7 @@ void mouse(int button, int state, int x, int y)
     idle();
 }
 
-//Gestion de la souris (rotate when click maintained)
+// Gestion de la souris (rotate when click maintained)
 void motion(int x, int y)
 {
     if (mouseRotatePressed == true)
@@ -486,13 +487,13 @@ void motion(int x, int y)
     }
 }
 
-//Resize de la camera
+// Resize de la camera
 void reshape(int w, int h)
 {
     camera.resize(w, h);
 }
 
-//Main
+// Main
 int main(int argc, char **argv)
 {
     if (argc > 2)
@@ -515,8 +516,8 @@ int main(int argc, char **argv)
 
     {
         // Load a first pointset, and build a kd-tree:
-        loadPN("pointsets/dino_subsampled_extreme.pn", positions, normals);
-        //applyRandomRigidTransformation(positions,normals);
+        loadPN("pointsets/dino.pn", positions, normals);
+        // applyRandomRigidTransformation(positions,normals);
         BasicANNkdTree kdtree;
         kdtree.build(positions); // Construction du kd tree a partir des positions
 
@@ -530,9 +531,9 @@ int main(int argc, char **argv)
         for (unsigned int pIt = 0; pIt < positions2.size(); ++pIt)
         {
             positions2[pIt] = Vec3(
-                 -0.6 + 1.2 * (double)(rand()) / (double)(RAND_MAX),
-                 -0.6 + 1.2 * (double)(rand()) / (double)(RAND_MAX),
-                 -0.6 + 1.2 * (double)(rand()) / (double)(RAND_MAX));
+                -0.6 + 1.2 * (double)(rand()) / (double)(RAND_MAX),
+                -0.6 + 1.2 * (double)(rand()) / (double)(RAND_MAX),
+                -0.6 + 1.2 * (double)(rand()) / (double)(RAND_MAX));
 
             positions2[pIt].normalize();
             positions2[pIt] = 0.6 * positions2[pIt];
@@ -541,12 +542,12 @@ int main(int argc, char **argv)
         positions3.resize(20000);
         normals3.resize(positions3.size());
 
-                for (unsigned int pIt = 0; pIt < positions3.size(); ++pIt)
+        for (unsigned int pIt = 0; pIt < positions3.size(); ++pIt)
         {
             positions3[pIt] = Vec3(
-                 -0.6 + 1.2 * (double)(rand()) / (double)(RAND_MAX),
-                 -0.6 + 1.2 * (double)(rand()) / (double)(RAND_MAX),
-                 -0.6 + 1.2 * (double)(rand()) / (double)(RAND_MAX));
+                -0.6 + 1.2 * (double)(rand()) / (double)(RAND_MAX),
+                -0.6 + 1.2 * (double)(rand()) / (double)(RAND_MAX),
+                -0.6 + 1.2 * (double)(rand()) / (double)(RAND_MAX));
 
             positions3[pIt].normalize();
             positions3[pIt] = 0.6 * positions3[pIt];
@@ -554,12 +555,12 @@ int main(int argc, char **argv)
 
         positions4.resize(20000);
         normals4.resize(positions4.size());
-                for (unsigned int pIt = 0; pIt < positions4.size(); ++pIt)
+        for (unsigned int pIt = 0; pIt < positions4.size(); ++pIt)
         {
             positions4[pIt] = Vec3(
-                 -0.6 + 1.2 * (double)(rand()) / (double)(RAND_MAX),
-                 -0.6 + 1.2 * (double)(rand()) / (double)(RAND_MAX),
-                 -0.6 + 1.2 * (double)(rand()) / (double)(RAND_MAX));
+                -0.6 + 1.2 * (double)(rand()) / (double)(RAND_MAX),
+                -0.6 + 1.2 * (double)(rand()) / (double)(RAND_MAX),
+                -0.6 + 1.2 * (double)(rand()) / (double)(RAND_MAX));
 
             positions4[pIt].normalize();
             positions4[pIt] = 0.6 * positions4[pIt];
@@ -569,7 +570,6 @@ int main(int argc, char **argv)
         HPSS(positions, normals, positions2, normals2, kdtree, 0, 1, 3);
         HPSS(positions, normals, positions3, normals3, kdtree, 1, 1, 3);
         HPSS(positions, normals, positions4, normals4, kdtree, 2, 1, 3);
-
     }
 
     glutMainLoop();
