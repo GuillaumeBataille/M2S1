@@ -226,6 +226,40 @@ double wendland(double r, double d)
     return ((1 - pow(d / 2, 4)) * (1 + (4 * (d / r))));
 }
 
+// Fonction qui projette un point sur un cercle
+void project_to_circle(Vec3 center, double r,  Vec3 &point_input, Vec3 &point_output, Vec3 &normal_output)
+{   
+    Vec3 Center_to_Point = (point_input - center) / (point_input - center).length() ;
+    point_output = center + r * Center_to_Point;
+    normal_output = Center_to_Point;
+}
+
+double compute_weight(std::vector<Vec3> positions, std::vector<std::vector<Vec3>& weight, BasicANNkdTree const &kdtree, int kernel_type)
+{
+        int k = 10;
+        float radius = 0.2;
+        ANNidxArray id_nearest_neighbors = new ANNidx[k];
+        ANNdistArray square_distances_to_neighbors = new ANNdist[k];
+        for (int i = 0; i < positions.size(); i++) // Pour chaque point a projetter
+        {
+            kdtree.knearest(positions[i], k, id_nearest_neighbors, square_distances_to_neighbors); // On compute les k voisins
+
+            for (int j = 0; j < k; j++) // Pour chaque id_voisin
+            {
+                int distance = sqrt(square_distances_to_neighbors[j]); // La distance entre le voisin courant et le sommet initial
+            }
+        }
+        //
+
+}
+//Compute le u4 a partir des positions du voisinage, des normales du maillages et des poids
+double compute_u4(std::vector<Vec3> positions, std::vector<Vec3> normals, BasicANNkdTree const &kdtree)
+{
+    double result;
+
+
+    return result;
+}
 void HPSS(std::vector<Vec3> positions, std::vector<Vec3> normals, std::vector<Vec3> &positions2, std::vector<Vec3> &normals2, BasicANNkdTree const &kdtree, int kernel_type, float radius, unsigned int nbIterations = 1, unsigned int k = 20)
 {
 
