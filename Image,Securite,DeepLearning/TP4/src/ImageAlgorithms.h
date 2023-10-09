@@ -1701,14 +1701,14 @@ std::vector<double> CNN_Output(OCTET* FlattenedVector, int NbrofNeuronsOutput, i
 
         for (int j = 0; j < vectorSize; j++) // Pour chaque élément du flattened
         {
-            int weight = rand() % 500; // 500 arbitraire
+            int weight = rand() / RAND_MAX; // 500 arbitraire
             weight_sum += weight;
             sum += FlattenedVector[j] * weight;
         }
 
         // Assurez-vous que weight_sum n'est pas égal à zéro avant la division
         if (weight_sum != 0) {
-            result[i] = sum / static_cast<double>(weight_sum * 255);
+            result[i] = sum;
         } else {
             result[i] = 0.0; // Ou une valeur par défaut appropriée en cas de weight_sum égal à zéro
         }
