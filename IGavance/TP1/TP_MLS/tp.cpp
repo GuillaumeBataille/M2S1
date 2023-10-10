@@ -227,80 +227,99 @@ double wendland(double r, double d)
 }
 
 // Fonction qui projette un point sur un cercle
-void project_to_circle(Vec3 center, double r,  Vec3 &point_input, Vec3 &point_output, Vec3 &normal_output)
-{   
-    Vec3 Center_to_Point = (point_input - center) / (point_input - center).length() ;
+void project_to_circle(Vec3 center, double r, Vec3 &point_input, Vec3 &point_output, Vec3 &normal_output)
+{
+    Vec3 Center_to_Point = (point_input - center) / (point_input - center).length();
     point_output = center + r * Center_to_Point;
     normal_output = Center_to_Point;
 }
 
-void compute_weights(std::vector<double>& weight,std::vector<double> &weight_normalized, ANNidxArray id_nearest_neighbors,ANNdistArray square_distances_to_neighbors, int k, double radius = 0.2, int kernel_type = 0)
+void compute_weights(std::vector<double> &weight, std::vector<double> &weight_normalized, ANNidxArray id_nearest_neighbors, ANNdistArray square_distances_to_neighbors, int k, double radius = 0.2, int kernel_type = 0)
 {
-
-            double sum_w =0;
-
-            for (int j = 0; j < k; j++) // Pour chaque id_voisin
-            {
-                int distance = sqrt(square_distances_to_neighbors[j]); // La distance entre le voisin courant et le sommet initial
-                weight[j] = gaussienne(radius, distance);
-                sum_w += weight[j];
-            }
-
-            for (int j = 0; j < k; j++) // Pour chaque id_voisin
-            {
-                weight_normalized[j] = weight[j]/sum_w;
-            }
-}
-        //
-
-
-//Compute le u4 a partir des positions du voisinage, des normales du maillages et des poids
-double compute_u4(std::vector<Vec3> positions, std::vector<Vec3> normals, ANNidxArray id_nearest_neighbors, std::vector<double> weights ,std::vector<double> weights_normalized, int k)
-{
-    double result, sum1, sum2, sum3, sum4;
-    for(int j =0; j < k ;j++) // Pour chaque élément du voisinage
+    weight.resize(k);
+    weight_normalized.resize(k);
+    double sum_w = 0;
+    for (int j = 0; j < k; j++) // Pour chaque id_voisin
     {
-        double weight = weights[j]; // Le poids courant
-        double weight_normalized = weights_normalized[j];
-        Vec3 pos = positions[id_nearest_neighbors[j]];
-        Vec3 normal = normals[id_nearest_neighbors[j]];
-        Vec3 pos_transpose;
+        double distance = sqrt(square_distances_to_neighbors[j]); // La distance entre le voisin courant et le sommet initial
+        weight[j] = interpole(radius, distance);
+        sum_w += weight[j];
     }
+
+    for (int j = 0; j < k; j++) // Pour chaque id_voisin
+    {
+        weight_normalized[j] = weight[j] / sum_w;
+    }
+}
+//
+
+// Compute le u4 a partir des positions du voisinage, des normales du maillages et des poids
+double compute_u4(std::vector<Vec3> positions, std::vector<Vec3> normals, ANNidxArray id_nearest_neighbors, std::vector<double> weights, std::vector<double> weights_normalized, int k)
+{
+    double result;
+    double sum1 = 0.0;
+    double sum2 = 0.0;
+    double sum3 = 0.0;
+    double sum4 = 0.0;
+    double beta = 0.5;
+    for (int j = 0; j < k; j++) // Pour chaque élément du voisinage
+    {
+        double weight = weights[j];                       // Le poids courant
+        double weight_normalized = weights_normalized[j]; // Le poids normalisé courant
+        Vec3 pos = positions[id_nearest_neighbors[j]];    // La position du voisin courante
+        Vec3 normal = normals[id_nearest_neighbors[j]];   // La normale du voisin courante
+        Vec3 pos_T = pos;
+        sum1 += weight * (Vec3::dot(pos_T, normal));
+        sum2 += Vec3::dot(weight_normalized * pos_T, weight * normal);
+        sum3 += weight * (Vec3::dot(pos_T, pos));
+        sum4 += Vec3::dot(weight_normalized * pos_T, weight * pos);
+    }
+    result = beta * ((sum1 - sum2) / (sum3 - sum4));
+
     return result;
 }
 
-Vec3 compute_u1u2u3(std::vector<Vec3> positions, std::vector<Vec3> normals, ANNidxArray id_nearest_neighbors,std::vector<double> weights_normalized, int k)
+Vec3 compute_u1u2u3(std::vector<Vec3> positions, std::vector<Vec3> normals, ANNidxArray id_nearest_neighbors, std::vector<double> weights_normalized, int k, double u4)
 {
-    double sum1, sum2, sum3, sum4;
+    Vec3 sum1(0, 0, 0);
+    Vec3 sum2(0, 0, 0);
     Vec3 result;
 
-    for(int j =0; j < k ;j++) // Pour chaque élément du voisinage
+    for (int j = 0; j < k; j++) // Pour chaque élément du voisinage
     {
         double weight_normalized = weights_normalized[j];
         Vec3 pos = positions[id_nearest_neighbors[j]];
         Vec3 normal = normals[id_nearest_neighbors[j]];
-
+        sum1 += weight_normalized * normal;
+        sum2 += weight_normalized * pos;
     }
+    result = sum1 - 2 * u4 * sum2;
     return result;
 }
 
-double compute_u0(std::vector<Vec3> positions, ANNidxArray id_nearest_neighbors,std::vector<double> weights_normalized, int i, int k, Vec3 u1u2u3, double u4)
+double compute_u0(std::vector<Vec3> positions, ANNidxArray id_nearest_neighbors, std::vector<double> weights_normalized, int i, int k, Vec3 u1u2u3, double u4)
 {
-        double result, sum1, sum2, sum3, sum4;
+    double result;
+    Vec3 sum1(0, 0, 0);
+    double sum2 = 0.0;
 
-    for(int j =0; j < k ;j++) // Pour chaque élément du voisinage
+    for (int j = 0; j < k; j++) // Pour chaque élément du voisinage
     {
         double weight_normalized = weights_normalized[j];
         Vec3 pos = positions[id_nearest_neighbors[j]];
+        Vec3 pos_T = pos;
+        sum1 += weight_normalized * pos;
+        sum2 += weight_normalized * (Vec3::dot(pos_T, pos));
     }
+    result = Vec3::dot(-1 * (u1u2u3), sum1) - u4 * sum2;
     return result;
 }
 
-void compute_circle(Vec3 &center, double &radius, double u0, Vec3 u1u2u3 ,double u4)
+void compute_circle(Vec3 &center, double &radius, double u0, Vec3 u1u2u3, double u4)
 {
-center = (-1*u1u2u3)/(2*u4);
-radius = sqrt(pow(center.length(),2) - (u0/u4));
-//normal
+    center = (-1 * u1u2u3) / (2 * u4);
+    radius = sqrt(pow(center.length(), 2) - (u0 / u4));
+    // normal
 }
 
 void APSS(std::vector<Vec3> positions, std::vector<Vec3> normals, std::vector<Vec3> &positions2, std::vector<Vec3> &normals2, BasicANNkdTree const &kdtree, int kernel_type, float radius = 0.2, unsigned int k = 10)
@@ -308,38 +327,36 @@ void APSS(std::vector<Vec3> positions, std::vector<Vec3> normals, std::vector<Ve
 
     ANNidxArray id_nearest_neighbors = new ANNidx[k];
     ANNdistArray square_distances_to_neighbors = new ANNdist[k];
-    double u4,u0;
+    double u4, u0;
     Vec3 u1u2u3;
     std::vector<double> weights;
     std::vector<double> weights_normalized;
 
-    for(int i = 0; i < positions2.size();i++)// Pour chaque point a projeter
+    for (int i = 0; i < positions2.size(); i++) // Pour chaque point a projeter
     {
         kdtree.knearest(positions2[i], k, id_nearest_neighbors, square_distances_to_neighbors);
 
-        compute_weights(weights,weights_normalized,id_nearest_neighbors,square_distances_to_neighbors,k);
-        u4 = compute_u4(positions,normals,id_nearest_neighbors,weights,weights_normalized,k);
-        u1u2u3 = compute_u1u2u3(positions,normals,id_nearest_neighbors,weights_normalized,k);
-        u0 = compute_u0(positions, id_nearest_neighbors,weights_normalized,i,k,u1u2u3,u4);
-
-        if (sqrt(pow(u4,2)) < 0.01) // Si u4 est très proche/egal a 0 
+        compute_weights(weights, weights_normalized, id_nearest_neighbors, square_distances_to_neighbors, k);
+        u4 = compute_u4(positions, normals, id_nearest_neighbors, weights, weights_normalized, k);
+        u1u2u3 = compute_u1u2u3(positions, normals, id_nearest_neighbors, weights_normalized, k, u4);
+        u0 = compute_u0(positions, id_nearest_neighbors, weights_normalized, i, k, u1u2u3, u4);
+        if (sqrt(pow(u4, 2)) < 0.01) // Si u4 est très proche/egal a 0
         {
-         // CAS PLAN
-        Vec3 centroid(0,0,0);
-        Vec3 normal(0,0,0);
+            // CAS PLAN
+            Vec3 centroid(0, 0, 0);
+            Vec3 normal(0, 0, 0);
 
-        // TODO
+            // TODO
         }
         else
         {
-        Vec3 center;
-        double radius;
-        compute_circle(center,radius,u0,u1u2u3,u4);
-        Vec3 position_output;
-        Vec3 normal_ouput;
-        project_to_circle(center,radius,positions2[i],positions2[i],normals2[i]);
+            Vec3 center;
+            double radius;
+            compute_circle(center, radius, u0, u1u2u3, u4);
+            Vec3 position_output;
+            Vec3 normal_ouput;
+            project_to_circle(center, radius, positions2[i], positions2[i], normals2[i]);
         }
-
     }
     delete[] id_nearest_neighbors;
     delete[] square_distances_to_neighbors;
@@ -686,9 +703,10 @@ int main(int argc, char **argv)
         }
         // PROJECT USING MLS (HPSS and APSS):
         // TODO : Il faut faire se projetter les points secondaires sur la surface hypothétiquement definie par les sommet primaire
-        HPSS(positions, normals, positions2, normals2, kdtree, 0, 1, 3);
-        HPSS(positions, normals, positions3, normals3, kdtree, 1, 1, 3);
-        HPSS(positions, normals, positions4, normals4, kdtree, 2, 1, 3);
+        // HPSS(positions, normals, positions2, normals2, kdtree, 0, 1, 3);
+        // HPSS(positions, normals, positions3, normals3, kdtree, 1, 1, 3);
+        // HPSS(positions, normals, positions4, normals4, kdtree, 2, 1, 3);
+        APSS(positions, normals, positions2, normals2, kdtree, 0);
     }
 
     glutMainLoop();
