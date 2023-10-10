@@ -5,7 +5,7 @@ from tensorflow import keras
 #Data science items
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.metrics import plot_confusion_matrix, confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
 #Librairies utiles
 import sys,os

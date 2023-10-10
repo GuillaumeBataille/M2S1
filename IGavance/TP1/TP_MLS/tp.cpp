@@ -234,32 +234,117 @@ void project_to_circle(Vec3 center, double r,  Vec3 &point_input, Vec3 &point_ou
     normal_output = Center_to_Point;
 }
 
-double compute_weight(std::vector<Vec3> positions, std::vector<std::vector<Vec3>& weight, BasicANNkdTree const &kdtree, int kernel_type)
+void compute_weights(std::vector<double>& weight,std::vector<double> &weight_normalized, ANNidxArray id_nearest_neighbors,ANNdistArray square_distances_to_neighbors, int k, double radius = 0.2, int kernel_type = 0)
 {
-        int k = 10;
-        float radius = 0.2;
-        ANNidxArray id_nearest_neighbors = new ANNidx[k];
-        ANNdistArray square_distances_to_neighbors = new ANNdist[k];
-        for (int i = 0; i < positions.size(); i++) // Pour chaque point a projetter
-        {
-            kdtree.knearest(positions[i], k, id_nearest_neighbors, square_distances_to_neighbors); // On compute les k voisins
+
+            double sum_w =0;
 
             for (int j = 0; j < k; j++) // Pour chaque id_voisin
             {
                 int distance = sqrt(square_distances_to_neighbors[j]); // La distance entre le voisin courant et le sommet initial
+                weight[j] = gaussienne(radius, distance);
+                sum_w += weight[j];
             }
-        }
+
+            for (int j = 0; j < k; j++) // Pour chaque id_voisin
+            {
+                weight_normalized[j] = weight[j]/sum_w;
+            }
+}
         //
 
-}
+
 //Compute le u4 a partir des positions du voisinage, des normales du maillages et des poids
-double compute_u4(std::vector<Vec3> positions, std::vector<Vec3> normals, BasicANNkdTree const &kdtree)
+double compute_u4(std::vector<Vec3> positions, std::vector<Vec3> normals, ANNidxArray id_nearest_neighbors, std::vector<double> weights ,std::vector<double> weights_normalized, int k)
 {
-    double result;
-
-
+    double result, sum1, sum2, sum3, sum4;
+    for(int j =0; j < k ;j++) // Pour chaque élément du voisinage
+    {
+        double weight = weights[j]; // Le poids courant
+        double weight_normalized = weights_normalized[j];
+        Vec3 pos = positions[id_nearest_neighbors[j]];
+        Vec3 normal = normals[id_nearest_neighbors[j]];
+        Vec3 pos_transpose;
+    }
     return result;
 }
+
+Vec3 compute_u1u2u3(std::vector<Vec3> positions, std::vector<Vec3> normals, ANNidxArray id_nearest_neighbors,std::vector<double> weights_normalized, int k)
+{
+    double sum1, sum2, sum3, sum4;
+    Vec3 result;
+
+    for(int j =0; j < k ;j++) // Pour chaque élément du voisinage
+    {
+        double weight_normalized = weights_normalized[j];
+        Vec3 pos = positions[id_nearest_neighbors[j]];
+        Vec3 normal = normals[id_nearest_neighbors[j]];
+
+    }
+    return result;
+}
+
+double compute_u0(std::vector<Vec3> positions, ANNidxArray id_nearest_neighbors,std::vector<double> weights_normalized, int i, int k, Vec3 u1u2u3, double u4)
+{
+        double result, sum1, sum2, sum3, sum4;
+
+    for(int j =0; j < k ;j++) // Pour chaque élément du voisinage
+    {
+        double weight_normalized = weights_normalized[j];
+        Vec3 pos = positions[id_nearest_neighbors[j]];
+    }
+    return result;
+}
+
+void compute_circle(Vec3 &center, double &radius, double u0, Vec3 u1u2u3 ,double u4)
+{
+center = (-1*u1u2u3)/(2*u4);
+radius = sqrt(pow(center.length(),2) - (u0/u4));
+//normal
+}
+
+void APSS(std::vector<Vec3> positions, std::vector<Vec3> normals, std::vector<Vec3> &positions2, std::vector<Vec3> &normals2, BasicANNkdTree const &kdtree, int kernel_type, float radius = 0.2, unsigned int k = 10)
+{
+
+    ANNidxArray id_nearest_neighbors = new ANNidx[k];
+    ANNdistArray square_distances_to_neighbors = new ANNdist[k];
+    double u4,u0;
+    Vec3 u1u2u3;
+    std::vector<double> weights;
+    std::vector<double> weights_normalized;
+
+    for(int i = 0; i < positions2.size();i++)// Pour chaque point a projeter
+    {
+        kdtree.knearest(positions2[i], k, id_nearest_neighbors, square_distances_to_neighbors);
+
+        compute_weights(weights,weights_normalized,id_nearest_neighbors,square_distances_to_neighbors,k);
+        u4 = compute_u4(positions,normals,id_nearest_neighbors,weights,weights_normalized,k);
+        u1u2u3 = compute_u1u2u3(positions,normals,id_nearest_neighbors,weights_normalized,k);
+        u0 = compute_u0(positions, id_nearest_neighbors,weights_normalized,i,k,u1u2u3,u4);
+
+        if (sqrt(pow(u4,2)) < 0.01) // Si u4 est très proche/egal a 0 
+        {
+         // CAS PLAN
+        Vec3 centroid(0,0,0);
+        Vec3 normal(0,0,0);
+
+        // TODO
+        }
+        else
+        {
+        Vec3 center;
+        double radius;
+        compute_circle(center,radius,u0,u1u2u3,u4);
+        Vec3 position_output;
+        Vec3 normal_ouput;
+        project_to_circle(center,radius,positions2[i],positions2[i],normals2[i]);
+        }
+
+    }
+    delete[] id_nearest_neighbors;
+    delete[] square_distances_to_neighbors;
+}
+
 void HPSS(std::vector<Vec3> positions, std::vector<Vec3> normals, std::vector<Vec3> &positions2, std::vector<Vec3> &normals2, BasicANNkdTree const &kdtree, int kernel_type, float radius, unsigned int nbIterations = 1, unsigned int k = 20)
 {
 
