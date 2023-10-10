@@ -346,6 +346,13 @@ void APSS(std::vector<Vec3> positions, std::vector<Vec3> normals, std::vector<Ve
             Vec3 centroid(0, 0, 0);
             Vec3 normal(0, 0, 0);
 
+            for (int l = 0; l < k ;l++)
+            {   
+                int id_neighbor = id_nearest_neighbors[l];
+                centroid+= weights_normalized * positions[id_neighbor];
+                normal+= weights_normalized * normals[id_neighbor];
+            }
+            project(positions2[i],positions2[i],normals2[i],centroid,normal);
             // TODO
         }
         else
