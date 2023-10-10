@@ -242,7 +242,7 @@ void compute_weights(std::vector<double> &weight, std::vector<double> &weight_no
     for (int j = 0; j < k; j++) // Pour chaque id_voisin
     {
         double distance = sqrt(square_distances_to_neighbors[j]); // La distance entre le voisin courant et le sommet initial
-        weight[j] = interpole(radius, distance);
+        weight[j] = gaussienne(radius, distance);
         sum_w += weight[j];
     }
 
@@ -349,8 +349,9 @@ void APSS(std::vector<Vec3> positions, std::vector<Vec3> normals, std::vector<Ve
             for (int l = 0; l < k ;l++)
             {   
                 int id_neighbor = id_nearest_neighbors[l];
-                centroid+= weights_normalized * positions[id_neighbor];
-                normal+= weights_normalized * normals[id_neighbor];
+                
+                centroid += weights_normalized[l] * positions[id_nearest_neighbors[l]];
+                normal += weights_normalized[l] * normals[id_nearest_neighbors[l]];
             }
             project(positions2[i],positions2[i],normals2[i],centroid,normal);
             // TODO
@@ -659,7 +660,7 @@ int main(int argc, char **argv)
 
     {
         // Load a first pointset, and build a kd-tree:
-        loadPN("pointsets/dino.pn", positions, normals);
+        loadPN("pointsets/igea2.pn", positions, normals);
         // applyRandomRigidTransformation(positions,normals);
         BasicANNkdTree kdtree;
         kdtree.build(positions); // Construction du kd tree a partir des positions
