@@ -61,22 +61,29 @@ static bool fullScreen = false;
 
 
 
+Vec3 get_centroid(std::vector<Vec3> const & points)
+{
+    Vec3 center = Vec3(0,0,0);
+    for(Vec3 v : points){
+        center += v;
+    }
 
+    return center / points.size();
+}
 
 // ------------------------------------
 // ICP
 // ------------------------------------
-
-void compute_centroid(std::vector<Vec3> P){
-
-}
-
 
 void ICP(std::vector<Vec3> const & ps , std::vector<Vec3> const & nps ,
          std::vector<Vec3> const & qs , std::vector<Vec3> const & nqs ,
          BasicANNkdTree const & qsKdTree , Mat3 & rotation , Vec3 & translation , unsigned int nIterations) {
     // align ps on qs : qs = rotation * ps + translation
     
+
+    for(unsigned int it = 0 ; it < nIterations ; ++it) {
+        // TODO
+    //Compute centroid de P
     std::vector<Vec3> P;
     std::vector<Vec3> Q;
     std::vector<Vec3> ps_ = ps;
@@ -84,31 +91,24 @@ void ICP(std::vector<Vec3> const & ps , std::vector<Vec3> const & nps ,
     ANNidxArray id_nearest_neighbors = new ANNidx[1];
     ANNdistArray square_distances_to_neighbors = new ANNdist[1];
     Mat3 M,U,Vt,R;
+
     P.resize(ps.size());
     Q.resize(ps.size());
     Vec3 sumP( 0.,0.,0.);
     Vec3 sumQ( 0.,0.,0.);
-
+    Vec3 centroidP = get_centroid(ps_);
+    Vec3 centroidQ = get_centroid(qs_);
     
+    //translation = centroidQ - centroidP;
 
-    for(unsigned int it = 0 ; it < nIterations ; ++it) {
-        // TODO
-    //Compute centroid de P
-    for (int i=0; i < ps.size();i++)
+        for (int i=0; i < ps.size();i++)
     {
         kdtree.knearest(ps_[i], 1, id_nearest_neighbors, square_distances_to_neighbors); 
         ps_[i] = qs[id_nearest_neighbors[1]];
     }
 
-    for(int i=0; i < ps.size();i++)
-    {
-        sumP += ps_[i];
-        sumQ += qs[i];
-
-    }
-
-    Vec3 centroidP = sumP / ps.size();
-    Vec3 centroidQ = sumQ / qs.size();
+    std::cout<<" Centroid P :"<< centroidP <<std::endl;
+    std::cout<<" Centroid Q :"<< centroidQ <<std::endl;
 
     std::cout<<std::endl;
     std::cout<<"P size : "<< ps.size()<<std::endl;
@@ -118,32 +118,68 @@ void ICP(std::vector<Vec3> const & ps , std::vector<Vec3> const & nps ,
     std::cout<<" Centroid Q :"<< centroidQ <<std::endl;
 
 
-    for (int i=0; i<ps.size();i++)
-    {
-        P[i]= ps_[i] - centroidP;
-        Q[i] = qs[i] - centroidQ;
-    }
-
 
     float scaleX,scaleY,scaleZ;
     for(unsigned int i=0; i<ps.size(); i++){
-        M = M + Mat3::tensor(Q[i], P[i]);
+
+        Vec3 nearestPoint = qs[kdtree.nearest(ps[i])];
+        P[i]= ps[i] - centroidP;
+        Q[i] = qs[i] - centroidQ;
+        
+        Vec3 a = ps[i] - centroidP;
+        Vec3 b = qs[i] - centroidQ;
+
+        M = M + Mat3::tensor(b, a);
+        //M = M + Mat3::tensor(Q[i], P[i]);
     }
 
 
 
     M.SVD(U,scaleX,scaleY,scaleZ,Vt);
-    U.transpose();
+    //U.transpose();
     //Vt.transpose();
-    Mat3 res = Vt*U;
-    R = U * Vt;
-    rotation = res * rotation;
-    translation = centroidQ;
-    std::cout<<"Matrice de rotation : "<< R <<std::endl;
+
+    rotation = U*Vt;
+    translation = centroidQ - rotation * centroidP;
+
+    std::cout<<"Matrice de rotation : "<< rotation <<std::endl;
+
         std::cout << "\tICP , iteration " << it << " done" << std::endl;
     }
 
         
+    /*Vec3 c_dest = get_centroid(qs);
+    Vec3 c_actuel = get_centroid(ps);
+
+    //translation = c_dest - c_actuel;
+
+    Mat3 M = Mat3();
+
+    // Une optimisation avec le produit tensoriel qui correspond à M = P.Qt
+    // avec P : la matrice 3xN ou la ième colonne correspond au vecteur (point source -> centre source)
+    // Q : la matrice 3xN ou la ième colonne correspond au vecteur (point target -> centre target)
+    for(int i = 0; i < ps.size(); ++i)
+    {
+        Vec3 nearestPoint = qs[kdtree.nearest(ps[i])];
+
+        Vec3 a = ps[i] - c_actuel;
+        Vec3 b = qs[i] - c_dest;
+
+        M = M + Mat3::tensor(b, a);
+    }
+
+    Mat3 U, Vt;
+    float sx, sy, sz;
+
+    M.SVD(U, sx, sy, sz, Vt);
+
+
+    rotation = U*Vt;
+    translation = c_dest - rotation * c_actuel;
+       for(int i = 0; i < ps.size(); ++i)
+    {
+        //ps[i] = c_dest + rotation*(ps[i] - c_actuel);
+    }*/
 
 }
 
@@ -433,7 +469,7 @@ void key (unsigned char keyPressed, int x, int y) {
         break;
 
     case 'i':
-        performICP(5);
+        performICP(1);
         break;
 
     case 'w':
@@ -524,11 +560,11 @@ int main (int argc, char ** argv) {
     // ICP :
     {
         // Load a first pointset, and build a kd-tree:
-        loadPN("pointsets/face.pn" , positions , normals);
+        loadPN("pointsets/dino_subsampled_extreme.pn" , positions , normals);
         kdtree.build(positions);
 
         // Load a second pointset :
-        loadPN("pointsets/face.pn" , positions2 , normals2);
+        loadPN("pointsets/dino_subsampled_extreme.pn" , positions2 , normals2);
 
         // Transform it slightly :
         srand(time(NULL));
@@ -546,7 +582,7 @@ int main (int argc, char ** argv) {
         positions3 = positions2;
         normals3 = normals2;
 
-        performICP(3);
+        //performICP(3);
     }
 
     

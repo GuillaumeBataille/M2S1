@@ -332,16 +332,18 @@ void APSS(std::vector<Vec3> positions, std::vector<Vec3> normals, std::vector<Ve
     std::vector<double> weights;
     std::vector<double> weights_normalized;
 
+    for (int m = 0; m < 2; m++)
+    {
     for (int i = 0; i < positions2.size(); i++) // Pour chaque point a projeter
     {
         kdtree.knearest(positions2[i], k, id_nearest_neighbors, square_distances_to_neighbors);
 
         compute_weights(weights, weights_normalized, id_nearest_neighbors, square_distances_to_neighbors, k);
         u4 = compute_u4(positions, normals, id_nearest_neighbors, weights, weights_normalized, k);
-        u1u2u3 = compute_u1u2u3(positions, normals, id_nearest_neighbors, weights_normalized, k, u4);
-        u0 = compute_u0(positions, id_nearest_neighbors, weights_normalized, i, k, u1u2u3, u4);
-        if (sqrt(pow(u4, 2)) < 0.01) // Si u4 est très proche/egal a 0
+
+        if (sqrt(pow(u4, 2)) < 0.1) // Si u4 est très proche/egal a 0
         {
+            std::cout<<"0"<<std::endl;
             // CAS PLAN
             Vec3 centroid(0, 0, 0);
             Vec3 normal(0, 0, 0);
@@ -358,13 +360,14 @@ void APSS(std::vector<Vec3> positions, std::vector<Vec3> normals, std::vector<Ve
         }
         else
         {
+            u1u2u3 = compute_u1u2u3(positions, normals, id_nearest_neighbors, weights_normalized, k, u4);
+            u0 = compute_u0(positions, id_nearest_neighbors, weights_normalized, i, k, u1u2u3, u4);
             Vec3 center;
             double radius;
             compute_circle(center, radius, u0, u1u2u3, u4);
-            Vec3 position_output;
-            Vec3 normal_ouput;
             project_to_circle(center, radius, positions2[i], positions2[i], normals2[i]);
         }
+    }
     }
     delete[] id_nearest_neighbors;
     delete[] square_distances_to_neighbors;
@@ -660,7 +663,7 @@ int main(int argc, char **argv)
 
     {
         // Load a first pointset, and build a kd-tree:
-        loadPN("pointsets/igea2.pn", positions, normals);
+        loadPN("pointsets/face_subsampled_extreme.pn", positions, normals);
         // applyRandomRigidTransformation(positions,normals);
         BasicANNkdTree kdtree;
         kdtree.build(positions); // Construction du kd tree a partir des positions
@@ -711,10 +714,10 @@ int main(int argc, char **argv)
         }
         // PROJECT USING MLS (HPSS and APSS):
         // TODO : Il faut faire se projetter les points secondaires sur la surface hypothétiquement definie par les sommet primaire
-        // HPSS(positions, normals, positions2, normals2, kdtree, 0, 1, 3);
+        //HPSS(positions, normals, positions2, normals2, kdtree, 0, 1, 3);
         // HPSS(positions, normals, positions3, normals3, kdtree, 1, 1, 3);
         // HPSS(positions, normals, positions4, normals4, kdtree, 2, 1, 3);
-        APSS(positions, normals, positions2, normals2, kdtree, 0);
+        APSS(positions, normals, positions2, normals2, kdtree, 0,0.5,20);
     }
 
     glutMainLoop();
