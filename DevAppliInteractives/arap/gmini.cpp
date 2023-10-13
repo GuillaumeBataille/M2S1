@@ -150,6 +150,8 @@ Eigen::MatrixXd getClosestRotation( Eigen::MatrixXd const & m ) {
 void updateSystem() {
     if(! handlesWereChanged) return;
 
+    //------------------- Resize de la matrice A -------------------------//
+
     // TODO:
     // set the right values for the number or rows and number of columns
     // remember: number of colums = nb of variables
@@ -162,36 +164,51 @@ void updateSystem() {
     //Calcul des lignes voisines
     for( unsigned int v = 0 ; v < mesh.V.size() ; ++v ) { // Pour chaque sommet du maillage
         unsigned int numberOfNeighbors = edgeAndVertexWeights.get_n_adjacent_edges(v); // On regarde tout les voisins qui existe pour ce sommet
-        nrows += nrows + numberOfNeighbors;   // On ajoute le nombre de voisin courant
+        nrows += numberOfNeighbors;   // On ajoute le nombre de voisin courant
     }
+
+
     //Calcul des lignes handle
     for( unsigned int v = 0 ; v < mesh.V.size() ; ++v ) {
         if(verticesHandles[v] != -1) {
-            nrows += nrows + 1;  // On ajoute une ligne pour chaque handle
+            nrows ++;  // On ajoute une ligne pour chaque handle
         }
     }
+    nrows *= 3; // On a nos 3 dimensions à gérer (xyz) pour chaque arête
 
-    // Once the number of rows and columns have been found, we can allocate the matrices:
-    arapLinearSystem.setDimensions( nrows , ncolumns );
+    // Calcul des colonnes
+    ncolumns = mesh.V.size(); // Les valeurs colonnes correspondent aux variables de notre calcul
 
-    // TODO:
-    // set the right values for the matrix A in the linear system
+    //Resize de la matrice A
+    arapLinearSystem.setDimensions( nrows , ncolumns);
 
+    //------------------- Resize de la matrice A -------------------------//
     unsigned int equationIndex = 0;
     for( unsigned int v = 0 ; v < mesh.V.size() ; ++v ) {
         for( std::map< unsigned int , double >::const_iterator it = edgeAndVertexWeights.get_weight_of_adjacent_edges_it_begin(v) ;
              it != edgeAndVertexWeights.get_weight_of_adjacent_edges_it_end(v) ; ++it) {
 
-            unsigned int vNeighbor = it->first; // Ici idJ
+            unsigned int id_i = v; // ici le id du point étudié
+            unsigned int id_j = it->first; // ici un id des j point voisin
 
+            for(int i = 0; i < 3;i++) // Pour nos 3 composantes
+            {
+                arapLinearSystem.A(equationIndex,id_i) = -1.0;
+                arapLinearSystem.A(equationIndex,id_j) = 1.0;
+                equationIndex++;
+            }
             // WHAT TO PUT HERE ??????? How to update the entries of A ?
 
         }
     }
     for( unsigned int v = 0 ; v < mesh.V.size() ; ++v ) { // PARTIE CONTRAINTES
         if(verticesHandles[v] != -1) {
-
-            // WHAT TO PUT HERE ??????? How to update the entries of A ?
+            unsigned int id_handled = v;
+            for(int i = 0; i < 3;i++) // Pour nos 3 composantes
+                {
+                    arapLinearSystem.A(equationIndex,v);
+                    equationIndex++;
+                }
 
         }
     }
@@ -203,13 +220,11 @@ void updateSystem() {
 
 
 void updateMeshVertexPositionsFromARAPSolver() {
-    return; // TODO : COMMENT THIS LINE WHEN YOU START THE EXERCISE  (setup of the matrix A for the linear system A.X=B)
+    //return; // TODO : COMMENT THIS LINE WHEN YOU START THE EXERCISE  (setup of the matrix A for the linear system A.X=B)
     updateSystem();
-
     unsigned int maxIterationsForArap = 5;
 
-
-    return; // TODO : COMMENT THIS LINE WHEN YOU CONTINUE THE EXERCISE  (setup of the vector B for the linear system A.X=B)
+    //return; // TODO : COMMENT THIS LINE WHEN YOU CONTINUE THE EXERCISE  (setup of the vector B for the linear system A.X=B)
     // set the right values for the vector b in the linear system, solve the linear system and update the positions using the solution.
 
 
@@ -226,14 +241,24 @@ void updateMeshVertexPositionsFromARAPSolver() {
                 rotatedEdge = vertexRotationMatrices[v] * rotatedEdge;
 
                 // WHAT TO PUT HERE ??????? How to update the entries of b ?
+            for(int i = 0; i < 3;i++) // Pour nos 3 composantes
+            {
+                double rotateEdge_coord = rotatedEdge[i]; // Composante x puis y puis z
+                arapLinearSystem.b(equationIndex) = rotateEdge_coord;
+                equationIndex++;
+            }
 
             }
         }
         for( unsigned int v = 0 ; v < mesh.V.size() ; ++v ) {
             if(verticesHandles[v] != -1) {
-
+            for(int i = 0; i < 3;i++) // Pour nos 3 composantes
+            {
+                double handle_coord = v[i];
+                arapLinearSystem.b(equationIndex) = handle_coord ;
+                equationIndex++;
+            }
                 // WHAT TO PUT HERE ??????? How to update the entries of b ?
-
             }
         }
 
