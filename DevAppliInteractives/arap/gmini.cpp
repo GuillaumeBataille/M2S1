@@ -171,7 +171,7 @@ void updateSystem() {
     //Calcul des lignes handle
     for( unsigned int v = 0 ; v < mesh.V.size() ; ++v ) {
         if(verticesHandles[v] != -1) {
-            nrows ++;  // On ajoute une ligne pour chaque handle
+            nrows++;  // On ajoute une ligne pour chaque handle
         }
     }
     nrows *= 3; // On a nos 3 dimensions à gérer (xyz) pour chaque arête
@@ -220,11 +220,11 @@ void updateSystem() {
 
 
 void updateMeshVertexPositionsFromARAPSolver() {
-    //return; // TODO : COMMENT THIS LINE WHEN YOU START THE EXERCISE  (setup of the matrix A for the linear system A.X=B)
+    return; // TODO : COMMENT THIS LINE WHEN YOU START THE EXERCISE  (setup of the matrix A for the linear system A.X=B)
     updateSystem();
     unsigned int maxIterationsForArap = 5;
 
-    //return; // TODO : COMMENT THIS LINE WHEN YOU CONTINUE THE EXERCISE  (setup of the vector B for the linear system A.X=B)
+    return; // TODO : COMMENT THIS LINE WHEN YOU CONTINUE THE EXERCISE  (setup of the vector B for the linear system A.X=B)
     // set the right values for the vector b in the linear system, solve the linear system and update the positions using the solution.
 
 
@@ -254,11 +254,12 @@ void updateMeshVertexPositionsFromARAPSolver() {
             if(verticesHandles[v] != -1) {
             for(int i = 0; i < 3;i++) // Pour nos 3 composantes
             {
-                double handle_coord = v[i];
+                 // WHAT TO PUT HERE ??????? How to update the entries of b ?
+                double handle_coord = mesh.V[v][i];
                 arapLinearSystem.b(equationIndex) = handle_coord ;
                 equationIndex++;
             }
-                // WHAT TO PUT HERE ??????? How to update the entries of b ?
+               
             }
         }
 
@@ -279,10 +280,10 @@ void updateMeshVertexPositionsFromARAPSolver() {
 
 
         // 2 SECOND : UPDATE THE ROTATION MATRICES
-        for( unsigned int v = 0 ; v < mesh.V.size() ; ++v ) {
+        for( unsigned int v = 0 ; v < mesh.V.size() ; ++v ) { // Pour tout les vertex
             Eigen::MatrixXd tensorMatrix = Eigen::MatrixXd::Zero(3,3);
             for( std::map< unsigned int , double >::const_iterator it = edgeAndVertexWeights.get_weight_of_adjacent_edges_it_begin(v) ;
-                 it != edgeAndVertexWeights.get_weight_of_adjacent_edges_it_end(v) ; ++it) {
+                 it != edgeAndVertexWeights.get_weight_of_adjacent_edges_it_end(v) ; ++it) { // Pour tout mes edges courant
                 unsigned int vNeighbor = it->first;
                 Eigen::VectorXd initialEdge(3);
                 Eigen::VectorXd rotatedEdge(3);
