@@ -50,6 +50,9 @@ static bool mouseZoomPressed = false;
 static int lastX=0, lastY=0, lastZoom=0;
 static unsigned int FPS = 0;
 static bool fullScreen = false;
+static float radius =0.01;
+static float defaultradius = radius;
+static unsigned int lastVertexClicked = -1;
 
 enum ViewerState {
     ViewerState_NORMAL ,
@@ -72,11 +75,11 @@ LaplacianWeights edgeAndVertexWeights;
 linearSystem arapLinearSystem;
 std::vector< Eigen::MatrixXd > vertexRotationMatrices;
 
-int numberOfHandles = 0;
-int activeHandle = 0;
+int numberOfHandles = 0; // Nombre de handle
+int activeHandle = 0; // Nombre d'handle actif
 bool handlesWereChanged = false; // if they are changed, we need to update the system for ARAP
-std::vector< bool > verticesAreMarkedForCurrentHandle;
-std::vector< int > verticesHandles;
+std::vector< bool > verticesAreMarkedForCurrentHandle; //Liste des vertices marked pour le handle courant
+std::vector< int > verticesHandles; // Liste des id des vertices handled
 double spheresSize = 0.01;
 
 
@@ -177,7 +180,7 @@ void updateSystem() {
     nrows *= 3; // On a nos 3 dimensions à gérer (xyz) pour chaque arête
 
     // Calcul des colonnes
-    ncolumns = mesh.V.size(); // Les valeurs colonnes correspondent aux variables de notre calcul
+    ncolumns = mesh.V.size()*3; // Les valeurs colonnes correspondent aux variables de notre calcul
 
     //Resize de la matrice A
     arapLinearSystem.setDimensions( nrows , ncolumns);
@@ -188,28 +191,28 @@ void updateSystem() {
         for( std::map< unsigned int , double >::const_iterator it = edgeAndVertexWeights.get_weight_of_adjacent_edges_it_begin(v) ;
              it != edgeAndVertexWeights.get_weight_of_adjacent_edges_it_end(v) ; ++it) {
 
-            unsigned int id_i = v; // ici le id du point étudié
-            unsigned int id_j = it->first; // ici un id des j point voisin
+            unsigned int vNeighbor = it->first;
 
-            for(int i = 0; i < 3;i++) // Pour nos 3 composantes
-            {
-                arapLinearSystem.A(equationIndex,id_i) = -1.0;
-                arapLinearSystem.A(equationIndex,id_j) = 1.0;
-                equationIndex++;
-            }
             // WHAT TO PUT HERE ??????? How to update the entries of A ?
+
+            for(int i =0; i < 3;i++) // Pour les 3 composantes
+            {// On mets chaque chaque ligne (x y z) a -1 et 1 quand on les selectionnes
+            arapLinearSystem.A(equationIndex, v*3+i) = -1.0; 
+            arapLinearSystem.A(equationIndex, vNeighbor*3+i) = 1.0;
+            equationIndex++; // Incrémenter l'index courant
+            }
+        
 
         }
     }
     for( unsigned int v = 0 ; v < mesh.V.size() ; ++v ) { // PARTIE CONTRAINTES
         if(verticesHandles[v] != -1) {
             unsigned int id_handled = v;
-            for(int i = 0; i < 3;i++) // Pour nos 3 composantes
-                {
-                    arapLinearSystem.A(equationIndex,v);
-                    equationIndex++;
-                }
-
+            for(int i =0; i<3;i++)
+            {
+                arapLinearSystem.A(equationIndex, id_handled*3+i) = 1.0;
+                equationIndex++;
+            }
         }
     }
 
@@ -220,11 +223,11 @@ void updateSystem() {
 
 
 void updateMeshVertexPositionsFromARAPSolver() {
-    return; // TODO : COMMENT THIS LINE WHEN YOU START THE EXERCISE  (setup of the matrix A for the linear system A.X=B)
+    //return; // TODO : COMMENT THIS LINE WHEN YOU START THE EXERCISE  (setup of the matrix A for the linear system A.X=B)
     updateSystem();
     unsigned int maxIterationsForArap = 5;
 
-    return; // TODO : COMMENT THIS LINE WHEN YOU CONTINUE THE EXERCISE  (setup of the vector B for the linear system A.X=B)
+    //return; // TODO : COMMENT THIS LINE WHEN YOU CONTINUE THE EXERCISE  (setup of the vector B for the linear system A.X=B)
     // set the right values for the vector b in the linear system, solve the linear system and update the positions using the solution.
 
 
@@ -241,11 +244,12 @@ void updateMeshVertexPositionsFromARAPSolver() {
                 rotatedEdge = vertexRotationMatrices[v] * rotatedEdge;
 
                 // WHAT TO PUT HERE ??????? How to update the entries of b ?
-            for(int i = 0; i < 3;i++) // Pour nos 3 composantes
+             // Pour nos 3 composantes
             {
-                double rotateEdge_coord = rotatedEdge[i]; // Composante x puis y puis z
-                arapLinearSystem.b(equationIndex) = rotateEdge_coord;
-                equationIndex++;
+                arapLinearSystem.b(equationIndex+0) = rotatedEdge.x();
+                arapLinearSystem.b(equationIndex+1) = rotatedEdge.y();
+                arapLinearSystem.b(equationIndex+2) = rotatedEdge.z();
+                equationIndex += 3;
             }
 
             }
@@ -255,7 +259,7 @@ void updateMeshVertexPositionsFromARAPSolver() {
             for(int i = 0; i < 3;i++) // Pour nos 3 composantes
             {
                  // WHAT TO PUT HERE ??????? How to update the entries of b ?
-                double handle_coord = mesh.V[v][i];
+                double handle_coord = mesh.V[v].p[i];
                 arapLinearSystem.b(equationIndex) = handle_coord ;
                 equationIndex++;
             }
@@ -275,7 +279,7 @@ void updateMeshVertexPositionsFromARAPSolver() {
 
 
 
-        return; // TODO : COMMENT THIS LINE WHEN YOU CONTINUE THE EXERCISE (update of the rotation matrices -- auxiliary variables)
+        //return; // TODO : COMMENT THIS LINE WHEN YOU CONTINUE THE EXERCISE (update of the rotation matrices -- auxiliary variables)
 
 
 
@@ -293,6 +297,7 @@ void updateMeshVertexPositionsFromARAPSolver() {
                 }
 
                 // WHAT TO PUT HERE ??????? How to update the entries of the tensor matrix ?
+                tensorMatrix += rotatedEdge * initialEdge.transpose(); //Fonction du cours pour update les matrices de rotations
 
             }
             vertexRotationMatrices[v] = getClosestRotation( tensorMatrix );
@@ -329,7 +334,7 @@ void updateMeshVertexPositionsFromARAPSolver() {
 
 
 
-
+//Translation de tout les vertices Handles si ils sont considéré comme actif
 void translateActiveHandle( Vec3 const & translationVector ) {
     for( unsigned int v = 0 ; v < mesh.V.size() ; ++v ) {
         if( verticesHandles[v] == activeHandle ) {
@@ -337,9 +342,10 @@ void translateActiveHandle( Vec3 const & translationVector ) {
         }
     }
 
-    updateMeshVertexPositionsFromARAPSolver();
+    updateMeshVertexPositionsFromARAPSolver(); //Update le système linéaire
 }
 
+// Rotation des vertices Handles si ils sont considéré comme actif
 void rotateActiveHandle( Vec3 const & rotationAxis , double angle ) {
     Eigen::Vector3d centerOfRotation(0,0,0);
     double sumWeights = 0.0;
@@ -365,7 +371,7 @@ void rotateActiveHandle( Vec3 const & rotationAxis , double angle ) {
         }
     }
 
-    updateMeshVertexPositionsFromARAPSolver();
+    updateMeshVertexPositionsFromARAPSolver(); // Update de l'équation linéaire
 }
 
 
@@ -383,6 +389,7 @@ void glNormal(Vec3 const & p) {
     glNormal3f(p[0] , p[1] , p[2]);
 }
 
+// Test de la validité d'un handle (compris entre 0 et le nombre max d'handle)
 bool activeHandleIsValid() {
     return activeHandle >= 0  &&  activeHandle < numberOfHandles;
 }
@@ -410,12 +417,12 @@ Vec3 getViewVector() {
 }
 
 
-
+//Fonction pour selectionner la liste des vertex dans la zone rectangulaire
 void setTagForVerticesInRectangle( bool tagToSet ) {
     float modelview[16];  glGetFloatv(GL_MODELVIEW_MATRIX , modelview);
     float projection[16]; glGetFloatv(GL_PROJECTION_MATRIX , projection);
 
-    for( unsigned int v = 0 ; v < mesh.V.size() ; ++v ) {
+     for( unsigned int v = 0 ; v < mesh.V.size() ; ++v ) { // Pour tout les vertex
         Vec3 const & p = mesh.V[ v ].p;
 
         float x = modelview[0] * p[0] + modelview[4] * p[1] + modelview[8] * p[2] + modelview[12];
@@ -432,10 +439,12 @@ void setTagForVerticesInRectangle( bool tagToSet ) {
         xx = ( xx + 1.f ) / 2.f;
         yy = ( yy + 1.f ) / 2.f;
 
-        if( rectangleSelectionTool.contains( xx , yy ) ) verticesAreMarkedForCurrentHandle[ v ] = tagToSet;
+        if( rectangleSelectionTool.contains( xx , yy ) )  // Si le vertex courant est dans le rectangle
+        verticesAreMarkedForCurrentHandle[ v ] = tagToSet; //Le tab de vertices marqué est set a true a l'indice du vertex courant
     }
 }
 
+//Fonction qui appelle cette du dessus pour compure tout ce qui est dans le rectangle
 void addVerticesToCurrentHandle() {
     // look at the rectangle rectangleSelectionTool, and see which vertices fall into the region.
     if( activeHandle < 0 || activeHandle >= numberOfHandles)
@@ -444,16 +453,57 @@ void addVerticesToCurrentHandle() {
     setTagForVerticesInRectangle( rectangleSelectionTool.isAdding );
 }
 
+//Fonction qui a partir de la liste de vertices marqué, compute tout ce qu'il faut pour tout mettre a jour
 void finalizeEditingOfCurrentHandle() {
-    for( unsigned int v = 0 ; v < mesh.V.size() ; ++v ) {
+    for( unsigned int v = 0 ; v < mesh.V.size() ; ++v ) { // Pour tout les vertex du mesh
         Vec3 const & p = mesh.V[ v ].p;
-        if(verticesAreMarkedForCurrentHandle[ v ]) {
-            verticesHandles[v] = activeHandle;
+        if(verticesAreMarkedForCurrentHandle[ v ]) { // Si le vertex courant est marqué comme handle
+           verticesHandles[v] = activeHandle; // On le marque comme actif a l'indice souhaité
             verticesAreMarkedForCurrentHandle[ v ] = false; // prepare next selection
         }
     }
 
-    handlesWereChanged = true;
+    handlesWereChanged = true; // Set que les handles ont été changés pour refresh le systeme linéaire
+}
+
+
+//---------------------------TP Suite - Sphere select vertex -------------------------------------//
+unsigned int getVertexFromClick(GLdouble mouseX, GLdouble mouseY) {
+    Vec3 clickPosition = Vec3(0., 0., 0.);
+    GLdouble modelView[16];  glGetDoublev(GL_MODELVIEW_MATRIX , modelView);
+    GLdouble projection[16]; glGetDoublev(GL_PROJECTION_MATRIX , projection);
+    GLint view[4]; glGetIntegerv(GL_VIEWPORT, view);
+
+    float depth;
+    glReadPixels(mouseX, view[3]-mouseY, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &depth);
+    gluUnProject(mouseX, view[3]-mouseY, depth, modelView, projection, view, &clickPosition[0], &clickPosition[1], &clickPosition[2]);
+    
+    double minDistance = MAXFLOAT;
+    unsigned int vertexIndex = 0;
+    size_t nbVertices = mesh.V.size();
+    for (unsigned int i = 0; i < nbVertices; ++i)
+    {
+        Vec3 vecDiff = mesh.V[i].p - clickPosition;
+        double distance = vecDiff.length();
+        if(distance < minDistance) {
+            minDistance = distance;
+            vertexIndex = i;
+        }
+    }
+    return vertexIndex;
+}
+
+
+void setNeighborsInRadiusFromVertexNaive() {
+    size_t nbVertices = mesh.V.size();
+    for (int i = 0; i < nbVertices; ++i) {
+        Vec3 vecDiff = mesh.V[i] - mesh.V[lastVertexClicked];
+        double distance = vecDiff.length();
+        if(distance < radius) {
+            verticesAreMarkedForCurrentHandle[i] = true;
+        } else if (verticesAreMarkedForCurrentHandle[i]!=true)
+         verticesAreMarkedForCurrentHandle[i] = false;
+    }
 }
 
 void printUsage () {
@@ -782,11 +832,14 @@ void key (unsigned char keyPressed, int x, int y) {
         if( viewerState == ViewerState_EDITINGHANDLE ) {
             viewerState = ViewerState_NORMAL;
             finalizeEditingOfCurrentHandle();
+            std::cout<<"Current mod : Transformation and vertex were successfully saved in the handle group "<< activeHandle <<std::endl;
+
         }
         break;
 
     case GLUT_KEY_ESCAPE:
         if( viewerState == ViewerState_TRANSLATINGHANDLE   ||   viewerState == ViewerState_ROTATINGHANDLE ) {
+            std::cout<<"Current mod : Normal"<<std::endl;
             viewerState = ViewerState_NORMAL;
         }
         break;
@@ -796,6 +849,7 @@ void key (unsigned char keyPressed, int x, int y) {
             viewerState = ViewerState_EDITINGHANDLE;
             ++numberOfHandles;
             activeHandle = numberOfHandles - 1; // last handle
+            std::cout<<"Current mod : Editing Handle - Current Group of Handle : "<<activeHandle <<std::endl;
         }
         break;
 
@@ -803,6 +857,8 @@ void key (unsigned char keyPressed, int x, int y) {
         if( viewerState == ViewerState_NORMAL   ||   viewerState == ViewerState_ROTATINGHANDLE ) {
             if( activeHandleIsValid() ) {
                 viewerState = ViewerState_TRANSLATINGHANDLE;
+                std::cout<<"Current mod : Translating"<<std::endl;
+
             }
         }
         break;
@@ -811,6 +867,8 @@ void key (unsigned char keyPressed, int x, int y) {
         if( viewerState == ViewerState_NORMAL   ||   viewerState == ViewerState_TRANSLATINGHANDLE ) {
             if( activeHandleIsValid() ) {
                 viewerState = ViewerState_ROTATINGHANDLE;
+                std::cout<<"Current mod : Rotating"<<std::endl;
+
             }
         }
         break;
@@ -822,6 +880,13 @@ void key (unsigned char keyPressed, int x, int y) {
     idle ();
 }
 
+
+
+
+void drawSphereBrush() {
+    Vec3 v = mesh.V[lastVertexClicked];
+    drawSphere( v[0] , v[1] , v[2] , radius , 10 , 10 );
+}
 
 void mouse (int button, int state, int x, int y) {
     if( glutGetModifiers() & GLUT_ACTIVE_CTRL    ||   rectangleSelectionTool.isActive ) { // we can activate the selection only with ctrl pressed
@@ -844,6 +909,29 @@ void mouse (int button, int state, int x, int y) {
         }
     }
     else {
+        if(lastVertexClicked != -1 && (button == 3 || button == 4)) {
+            float maxRadius = 3.;
+            float minRadius = defaultradius;
+            float changeValue = 0.01;
+
+            if(button == 3) {
+                if(radius + changeValue <= maxRadius) radius += changeValue;
+            } else {
+                if(radius - changeValue >= minRadius) radius -= changeValue;
+            }
+        }
+
+        if(button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+            //hasToDrawShpereBrush = true;
+            lastVertexClicked = getVertexFromClick(x, y);
+            if (viewerState == ViewerState_EDITINGHANDLE)
+            {
+            std::cout<<"Vertex were added by a Click in the handle group "<< activeHandle <<std::endl;
+            setNeighborsInRadiusFromVertexNaive();
+            }
+
+
+        }
         // moving the camera:
         if (state == GLUT_UP) {
             mouseMovePressed = false;
