@@ -1,0 +1,29 @@
+Objectif et contexte
+
+Partie 1 : Résolution d'un systeme d'équation linéaire 
+Montrer le raisonnement et le resultat
+Version AX = b 
+
+Partie 2 : Construction du systeme AX = b
+Presentation + schéma
+compute A 
+compute b
+
+Partie 3 : Résolution du systeme
+Fixer p, corriger R
+Fixer R, corriger p
+
+Partie 3 : Visuel
+
+Partie 4 : Selection sphérique via clic
+Expliquer comment on fait pour recuperer le point 3D a partie d'un point souris x y
+Repérer le voisinage sphérique autour du point et definir tout les handle dans ce rayon
+Comment on update en s'inspirant du select rectangle deja implémenté
+Visuels
+
+Partie 5 : Selection Géodésique via clic 
+Expliquer le principe 
+Pas eu le temps
+
+Conclusion: 
+Bien mais pas simple 
