@@ -75,8 +75,8 @@ Vec3 get_centroid(std::vector<Vec3> const & points)
 // ICP
 // ------------------------------------
 
-void ICP(std::vector<Vec3> const & ps , std::vector<Vec3> const & nps ,
-         std::vector<Vec3> const & qs , std::vector<Vec3> const & nqs ,
+void ICP(std::vector<Vec3> const  ps , std::vector<Vec3> const  nps ,
+         std::vector<Vec3> const  qs , std::vector<Vec3> const  nqs ,
          BasicANNkdTree const & qsKdTree , Mat3 & rotation , Vec3 & translation , unsigned int nIterations) {
     // align ps on qs : qs = rotation * ps + translation
     
@@ -560,15 +560,15 @@ int main (int argc, char ** argv) {
     // ICP :
     {
         // Load a first pointset, and build a kd-tree:
-        loadPN("pointsets/dino_subsampled_extreme.pn" , positions , normals);
+        loadPN("pointsets/face.pn" , positions , normals);
         kdtree.build(positions);
 
         // Load a second pointset :
-        loadPN("pointsets/dino_subsampled_extreme.pn" , positions2 , normals2);
+        loadPN("pointsets/face.pn" , positions2 , normals2);
 
         // Transform it slightly :
         srand(time(NULL));
-        Mat3 rotation = Mat3::RandRotation(M_PI / 3); // PLAY WITH THIS PARAMETER !!!!!!
+        Mat3 rotation = Mat3::RandRotation(M_PI ); // PLAY WITH THIS PARAMETER !!!!!!
         Vec3 translation = Vec3( -1.0 + 2.0 * ((double)(rand()) / (double)(RAND_MAX)),-1.0 + 2.0 * ((double)(rand()) / (double)(RAND_MAX)),-1.0 + 2.0 * ((double)(rand()) / (double)(RAND_MAX)) );
         for( unsigned int pIt = 0 ; pIt < positions2.size() ; ++pIt ) {
             positions2[pIt] = rotation * positions2[pIt] + translation;
